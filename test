@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🚀 Sala 3D de Investimentos</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js">
+    </script>
+
+    <!-- Three.js e CSS2DRenderer -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js">
+    </script>
+
+    <style>
+        /* Reset e base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #090d16;
+            overflow: hidden;
+            color: #f8fafc;
+            height: 100vh;
+        }
+
+        /* Container do Three.js ocupa a tela toda */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        /* Overlay da UI (login, botões, etc) */
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10;
+            pointer-events: none;
+            /* cliques passam para o 3D, exceto nos elementos interativos */;
+        }
+
+        #ui-overlay>* {
+            pointer-events: auto;
+        }
+
+        /* ===== TELA DE LOGIN ===== */
+        #loginScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            gap: 1.5rem;
+            background: rgba(9, 13, 22, 0.92);
+            backdrop-filter: blur(12px);
+            padding: 2rem;
+            text-align: center;
+        }
+
+        #loginScreen h1 {
+            font-size: 2.8rem;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 0 0 40px rgba(251, 191, 36, 0.25);
+        }
+
+        #loginScreen p {
+            color: #94a3b8;
+            max-width: 400px;
+        }
+
+        #loginScreen select,
+        #loginScreen input {
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 1rem;
+            min-width: 220px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        #loginScreen select option {
+            background: #1e1b4b;
+        }
+
+        #loginScreen .btn {
+            background: #06b6d4;
+            border: none;
+            padding: 0.8rem 2.5rem;
+            border-radius: 999px;
+            font-weight: 700;
+            color: #090d16;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        #loginScreen .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.3);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ===== BOTÕES DA SALA (canto superior) ===== */
+        #room-controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 20;
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            flex-wrap: wrap;
+            pointer-events: none;
+        }
+
+        #room-controls>* {
+            pointer-events: auto;
+        }
+
+        .badge-3d {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(22, 31, 48, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 0.4rem 1.2rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        .badge-3d i {
+            color: #fbbf24;
+        }
+
+        .btn-sair {
+            background: rgba(244, 63, 94, 0.2);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            color: #fecdd3;
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-sair:hover {
+            background: rgba(244, 63, 94, 0.4);
+        }
+
+        /* ===== PAINEL DE IDEIAS (canto inferior direito) ===== */
+        #ideas-panel {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 20;
+            width: 320px;
+            max-height: 50vh;
+            background: rgba(22, 31, 48, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 1.2rem 1.5rem;
+            overflow-y: auto;
+            pointer-events: auto;
+            transition: 0.3s;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        #ideas-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+        #ideas-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #ideas-panel::-webkit-scrollbar-thumb {
+            background: #06b6d4;
+            border-radius: 4px;
+        }
+
+        #ideas-panel h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #fbbf24;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        #ideas-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .idea-item-3d {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+            padding: 0.5rem 0.8rem;
+            font-size: 0.85rem;
+            border-left: 2px solid #06b6d4;
+            color: #e2e8f0;
+        }
+
+        .idea-item-3d strong {
+            color: #22d3ee;
+            font-weight: 700;
+        }
+
+        .empty-ideas {
+            color: #64748b;
+            font-style: italic;
+            font-size: 0.85rem;
+        }
+
+        /* ===== INPUT FLUTUANTE (digitar ideia) ===== */
+        #idea-input-area {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            background: rgba(22, 31, 48, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 60px;
+            padding: 0.4rem 0.4rem 0.4rem 1.5rem;
+            pointer-events: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            max-width: 90%;
+        }
+
+        #idea-input-area input {
+            background: transparent;
+            border: none;
+            color: #f8fafc;
+            font-size: 0.95rem;
+            padding: 0.6rem 0;
+            min-width: 200px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+        }
+
+        #idea-input-area input::placeholder {
+            color: #64748b;
+        }
+
+        #idea-input-area .btn-enviar {
+            background: #06b6d4;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 60px;
+            font-weight: 700;
+            color: #090d16;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            white-space: nowrap;
+        }
+
+        #idea-input-area .btn-enviar:hover {
+            background: #22d3ee;
+            transform: scale(1.02);
+        }
+
+        /* ===== VOTAÇÃO (canto inferior esquerdo) ===== */
+        #voting-area {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+
+        #voting-area>* {
+            pointer-events: auto;
+        }
+
+        .vote-box {
+            background: rgba(22, 31, 48, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 0.8rem 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            min-width: 160px;
+        }
+
+        .vote-box .label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+        }
+
+        .vote-box .buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .vote-box .buttons button {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 0.3rem 0;
+            color: #e2e8f0;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .vote-box .buttons button:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .vote-box .buttons button.voted-viable {
+            background: rgba(6, 182, 212, 0.3);
+            border-color: #06b6d4;
+        }
+        .vote-box .buttons button.voted-bold {
+            background: rgba(245, 158, 11, 0.3);
+            border-color: #f59e0b;
+        }
+
+        .vote-counts {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .vote-counts span strong {
+            color: #f8fafc;
+        }
+
+        /* ===== RESPONSIVO ===== */
+        @media (max-width: 768px) {
+            #ideas-panel {
+                width: 240px;
+                right: 15px;
+                bottom: 100px;
+                padding: 1rem;
+                max-height: 40vh;
+            }
+            #idea-input-area {
+                bottom: 15px;
+                padding: 0.3rem 0.3rem 0.3rem 1rem;
+                max-width: 95%;
+            }
+            #idea-input-area input {
+                min-width: 120px;
+                font-size: 0.85rem;
+            }
+            #idea-input-area .btn-enviar {
+                padding: 0.4rem 1rem;
+                font-size: 0.75rem;
+            }
+            #voting-area {
+                left: 15px;
+                bottom: 100px;
+            }
+            .vote-box {
+                min-width: 120px;
+                padding: 0.6rem 0.8rem;
+            }
+            #room-controls {
+                top: 10px;
+                left: 10px;
+                gap: 0.4rem;
+            }
+            .badge-3d {
+                font-size: 0.65rem;
+                padding: 0.2rem 0.8rem;
+            }
+            #loginScreen h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #ideas-panel {
+                width: 180px;
+                right: 10px;
+                bottom: 90px;
+                padding: 0.8rem;
+                font-size: 0.75rem;
+            }
+            .idea-item-3d {
+                font-size: 0.7rem;
+                padding: 0.3rem 0.6rem;
+            }
+            #idea-input-area input {
+                min-width: 80px;
+                font-size: 0.75rem;
+            }
+            .vote-box .buttons button {
+                font-size: 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== CONTAINER DO THREE.JS ===== -->
+    <div id="canvas-container"></div>
+
+    <!-- ===== OVERLAY DA UI ===== -->
+    <div id="ui-overlay">
+
+        <!-- TELA DE LOGIN -->
+        <div id="loginScreen">
+            <h1>🚀 Sala 3D</h1>
+            <p>Entre na experiência imersiva e colabore com sua equipe.</p>
+            <select id="profileSelect">
+                <option value="Paulo">Paulo – Renda Fixa</option>
+                <option value="Maria">Maria – Renda Variável</option>
+                <option value="Outro">Outro (digite nome)</option>
+            </select>
+            <input type="text" id="customName" placeholder="Seu nome" class="hidden" />
+            <button class="btn" id="enterBtn"><i class="fa-regular fa-rocket"></i> Entrar na Sala</button>
+        </div>
+
+        <!-- CONTROLES SUPERIORES (visíveis após login) -->
+        <div id="room-controls" class="hidden">
+            <span class="badge-3d"><i class="fa-regular fa-user"></i> <span id="userNameDisplay">—</span></span>
+            <span class="badge-3d"><i class="fa-regular fa-clock"></i> Ao vivo</span>
+            <button class="btn-sair" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</button>
+        </div>
+
+        <!-- PAINEL DE IDEIAS (canto inferior direito) -->
+        <div id="ideas-panel" class="hidden">
+            <h4><i class="fa-regular fa-lightbulb"></i> Ideias da Equipe</h4>
+            <div id="ideas-list">
+                <span class="empty-ideas">Aguardando contribuições...</span>
+            </div>
+        </div>
+
+        <!-- INPUT PARA DIGITAR IDEIA (centralizado embaixo) -->
+        <div id="idea-input-area" class="hidden">
+            <input type="text" id="ideaInput" placeholder="Digite sua ideia..." maxlength="200" />
+            <button class="btn-enviar" id="sendIdeaBtn"><i class="fa-regular fa-paper-plane"></i> Enviar</button>
+        </div>
+
+        <!-- VOTAÇÃO (canto inferior esquerdo) -->
+        <div id="voting-area" class="hidden">
+            <div class="vote-box">
+                <span class="label"><i class="fa-regular fa-star"></i> Votação</span>
+                <div class="buttons">
+                    <button id="voteViable" data-vote="viable">👍 Viável</button>
+                    <button id="voteBold" data-vote="bold">🚀 Ousada</button>
+                </div>
+                <div class="vote-counts">
+                    <span>👍 <strong id="countViable">0</strong></span>
+                    <span>🚀 <strong id="countBold">0</strong></span>
+                    <span style="color:#64748b;">Seu voto: <span id="myVoteDisplay">—</span></span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ============================================================
+        // 1. CONFIGURAÇÃO DO FIREBASE
+        // ============================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3yY5eZqk0s9fM3L5p7QwR2tY8xX1zU5o",
+            authDomain: "english-meetings-f08e4.firebaseapp.com",
+            databaseURL: "https://english-meetings-f08e4-default-rtdb.firebaseio.com",
+            projectId: "english-meetings-f08e4",
+            storageBucket: "english-meetings-f08e4.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef123456"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // ============================================================
+        // 2. VARIÁVEIS GLOBAIS
+        // ============================================================
+        let currentUser = '';
+        let scene, camera, renderer, labelRenderer, controls;
+        let roomObjects = [];
+        let clock = new THREE.Clock();
+
+        // ============================================================
+        // 3. FUNÇÕES DE LOGIN
+        // ============================================================
+        const loginScreen = document.getElementById('loginScreen');
+        const profileSelect = document.getElementById('profileSelect');
+        const customName = document.getElementById('customName');
+        const enterBtn = document.getElementById('enterBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userNameDisplay = document.getElementById('userNameDisplay');
+        const roomControls = document.getElementById('room-controls');
+        const ideasPanel = document.getElementById('ideas-panel');
+        const ideasList = document.getElementById('ideas-list');
+        const ideaInput = document.getElementById('ideaInput');
+        const sendIdeaBtn = document.getElementById('sendIdeaBtn');
+        const ideaInputArea = document.getElementById('idea-input-area');
+        const votingArea = document.getElementById('voting-area');
+        const voteViable = document.getElementById('voteViable');
+        const voteBold = document.getElementById('voteBold');
+        const countViable = document.getElementById('countViable');
+        const countBold = document.getElementById('countBold');
+        const myVoteDisplay = document.getElementById('myVoteDisplay');
+
+        // Mostrar/ocultar campo de nome customizado
+        profileSelect.addEventListener('change', () => {
+            customName.classList.toggle('hidden', profileSelect.value !== 'Outro');
+        });
+
+        function enterRoom() {
+            let name = profileSelect.value;
+            if (name === 'Outro') {
+                name = customName.value.trim() || 'Anônimo';
+            }
+            currentUser = name;
+            userNameDisplay.textContent = currentUser;
+
+            // Esconde login, mostra UI
+            loginScreen.classList.add('hidden');
+            roomControls.classList.remove('hidden');
+            ideasPanel.classList.remove('hidden');
+            ideaInputArea.classList.remove('hidden');
+            votingArea.classList.remove('hidden');
+
+            // Inicia a cena 3D
+            initScene();
+
+            // Listeners do Firebase
+            listenIdeas();
+            listenVotes();
+
+            // Carregar ideias existentes
+            loadUserIdea();
+
+            // Foco no input
+            ideaInput.focus();
+        }
+
+        enterBtn.addEventListener('click', enterRoom);
+        customName.addEventListener('keydown', (e) => { if (e.key === 'Enter') enterRoom(); });
+
+        logoutBtn.addEventListener('click', () => {
+            // Volta para login
+            loginScreen.classList.remove('hidden');
+            roomControls.classList.add('hidden');
+            ideasPanel.classList.add('hidden');
+            ideaInputArea.classList.add('hidden');
+            votingArea.classList.add('hidden');
+            // Remove a cena 3D
+            if (renderer) {
+                document.getElementById('canvas-container').innerHTML = '';
+                renderer = null;
+                labelRenderer = null;
+                scene = null;
+                camera = null;
+                controls = null;
+            }
+            currentUser = '';
+        });
+
+        // ============================================================
+        // 4. THREE.JS – CENA 3D
+        // ============================================================
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+
+            // --- Cena ---
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x090d16);
+            scene.fog = new THREE.Fog(0x090d16, 12, 25);
+
+            // --- Câmera ---
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(6, 4, 10);
+            camera.lookAt(0, 0, 0);
+
+            // --- Renderer WebGL ---
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            container.appendChild(renderer.domElement);
+
+            // --- CSS2DRenderer (labels) ---
+            labelRenderer = new THREE.CSS2DRenderer();
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0';
+            labelRenderer.domElement.style.left = '0';
+            labelRenderer.domElement.style.pointerEvents = 'none'; // cliques passam
+            container.appendChild(labelRenderer.domElement);
+
+            // --- Controles Orbit ---
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = false;
+            controls.target.set(0, 0.5, 0);
+            controls.maxPolarAngle = Math.PI / 2.1;
+            controls.minDistance = 3;
+            controls.maxDistance = 20;
+
+            // --- Luzes ---
+            const ambientLight = new THREE.AmbientLight(0x404060, 0.4);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+            dirLight.position.set(5, 12, 8);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            scene.add(dirLight);
+
+            const fillLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+            fillLight.position.set(-4, 2, -6);
+            scene.add(fillLight);
+
+            const backLight = new THREE.DirectionalLight(0xff8844, 0.2);
+            backLight.position.set(-2, 1, -8);
+            scene.add(backLight);
+
+            // --- Chão (grid + glow) ---
+            const gridHelper = new THREE.GridHelper(14, 20, 0x06b6d4, 0x1e293b);
+            gridHelper.position.y = -0.01;
+            scene.add(gridHelper);
+
+            // Disco de luz no chão
+            const groundGeo = new THREE.RingGeometry(2.5, 3.8, 64);
+            const groundMat = new THREE.MeshBasicMaterial({
+                color: 0x06b6d4,
+                transparent: true,
+                opacity: 0.08,
+                side: THREE.DoubleSide
+            });
+            const groundRing = new THREE.Mesh(groundGeo, groundMat);
+            groundRing.rotation.x = -Math.PI / 2;
+            groundRing.position.y = 0.001;
+            scene.add(groundRing);
+
+            // --- Cria os elementos 3D da sala ---
+            buildRoom();
+
+            // --- Resize ---
+            window.addEventListener('resize', onResize);
+
+            // --- Inicia animação ---
+            animate();
+        }
+
+        function onResize() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+            labelRenderer.setSize(w, h);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = clock.getElapsedTime();
+
+            // Animações sutis dos objetos
+            roomObjects.forEach((obj, i) => {
+                if (obj.userData.float) {
+                    obj.position.y += Math.sin(time * 0.5 + i) * 0.0008;
+                }
+                if (obj.userData.rotate) {
+                    obj.rotation.y += 0.002;
+                }
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        // ============================================================
+        // 5. CONSTRUÇÃO DA SALA 3D
+        // ============================================================
+        function buildRoom() {
+            // --- Mesa central (holográfica) ---
+            const tableGeo = new THREE.CylinderGeometry(2.8, 3.0, 0.15, 48);
+            const tableMat = new THREE.MeshPhysicalMaterial({
+                color: 0x1e293b,
+                metalness: 0.6,
+                roughness: 0.2,
+                transparent: true,
+                opacity: 0.5,
+                envMapIntensity: 0.4,
+            });
+            const table = new THREE.Mesh(tableGeo, tableMat);
+            table.position.set(0, 0.08, 0);
+            table.receiveShadow = true;
+            table.castShadow = true;
+            scene.add(table);
+
+            // Borda da mesa com glow
+            const rimGeo = new THREE.TorusGeometry(2.9, 0.04, 16, 64);
+            const rimMat = new THREE.MeshBasicMaterial({
+                color: 0x06b6d4,
+                transparent: true,
+                opacity: 0.4,
+            });
+            const rim = new THREE.Mesh(rimGeo, rimMat);
+            rim.position.set(0, 0.18, 0);
+            rim.rotation.x = Math.PI / 2;
+            scene.add(rim);
+
+            // --- Holograma do Mark (estilizado) ---
+            const markGroup = new THREE.Group();
+            markGroup.position.set(0, 0.8, 0);
+
+            // Corpo (capsula)
+            const bodyGeo = new THREE.CapsuleGeometry(0.35, 0.7, 8, 12);
+            const bodyMat = new THREE.MeshPhysicalMaterial({
+                color: 0x22d3ee,
+                metalness: 0.2,
+                roughness: 0.1,
+                transparent: true,
+                opacity: 0.6,
+                emissive: 0x06b6d4,
+                emissiveIntensity: 0.15,
+            });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.35;
+            body.castShadow = true;
+            markGroup.add(body);
+
+            // Cabeça (esfera)
+            const headGeo = new THREE.SphereGeometry(0.22, 16, 16);
+            const headMat = new THREE.MeshPhysicalMaterial({
+                color: 0x22d3ee,
+                metalness: 0.1,
+                roughness: 0.1,
+                transparent: true,
+                opacity: 0.7,
+                emissive: 0x06b6d4,
+                emissiveIntensity: 0.1,
+            });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 0.85;
+            head.castShadow = true;
+            markGroup.add(head);
+
+            // Anel ao redor do Mark (dados orbitando)
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const ringGeo = new THREE.TorusGeometry(0.55, 0.015, 6, 20);
+                const ringMat = new THREE.MeshBasicMaterial({
+                    color: 0xfbbf24,
+                    transparent: true,
+                    opacity: 0.3 + Math.sin(i) * 0.1,
+                });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.position.set(Math.cos(angle) * 0.55, 0.4 + Math.sin(angle * 2) * 0.15, Math.sin(angle) * 0.55);
+                ring.rotation.x = Math.PI / 2;
+                ring.rotation.z = angle;
+                ring.userData.rotate = true;
+                markGroup.add(ring);
+            }
+
+            // Texto "Mark 28" flutuando (CSS2D)
+            const markLabelDiv = document.createElement('div');
+            markLabelDiv.textContent = '🧑‍💼 Mark · 28 anos';
+            markLabelDiv.style.color = '#fbbf24';
+            markLabelDiv.style.fontSize = '14px';
+            markLabelDiv.style.fontWeight = '700';
+            markLabelDiv.style.textShadow = '0 0 20px rgba(251,191,36,0.3)';
+            markLabelDiv.style.background = 'rgba(9,13,22,0.7)';
+            markLabelDiv.style.padding = '4px 14px';
+            markLabelDiv.style.borderRadius = '20px';
+            markLabelDiv.style.border = '1px solid rgba(251,191,36,0.2)';
+            markLabelDiv.style.backdropFilter = 'blur(4px)';
+            const markLabel = new THREE.CSS2DObject(markLabelDiv);
+            markLabel.position.set(0, 1.3, 0);
+            markGroup.add(markLabel);
+
+            scene.add(markGroup);
+            markGroup.userData.float = true;
+            roomObjects.push(markGroup);
+
+            // --- Cards de conhecimento (flutuando ao redor) ---
+            const knowledgeData = {
+                'Paulo': [
+                    { title: 'Renda Fixa', desc: 'Investimentos com retorno predefinido. Menos risco.' },
+                    { title: 'Tesouro Direto', desc: 'Títulos públicos. Ex: Selic, IPCA+' },
+                    { title: 'CDB', desc: 'Certificado de Depósito Bancário. FGC até R$250k.' }
+                ],
+                'Maria': [
+                    { title: 'Renda Variável', desc: 'Retorno imprevisível, maior potencial.' },
+                    { title: 'Ações', desc: 'Frações de empresas. Ex: PETR4, VALE3.' },
+                    { title: 'Fundos Imobiliários', desc: 'Investem em imóveis. Rendem aluguéis.' }
+                ],
+                'Outro': [
+                    { title: 'Reserva de Emergência', desc: '3-6 meses de gastos em liquidez diária.' },
+                    { title: 'Diversificação', desc: 'Nunca coloque todos os ovos na mesma cesta.' },
+                    { title: 'Juros Compostos', desc: 'Reinvestir acelera o crescimento.' }
+                ]
+            };
+
+            // Pega os cards do perfil atual (ou fallback)
+            const userProfile = profileSelect.value;
+            const cards = knowledgeData[userProfile] || knowledgeData['Outro'];
+
+            const colors = [0x06b6d4, 0xf59e0b, 0xa855f7];
+            const positions = [
+                { x: -1.8, z: 1.8 },
+                { x: 1.8, z: 1.8 },
+                { x: 0, z: -2.2 }
+            ];
+
+            cards.forEach((card, index) => {
+                const group = new THREE.Group();
+                const pos = positions[index % positions.length];
+                group.position.set(pos.x, 0.6, pos.z);
+
+                // Placa do card
+                const cardGeo = new THREE.BoxGeometry(0.9, 0.5, 0.08);
+                const cardMat = new THREE.MeshPhysicalMaterial({
+                    color: colors[index % colors.length],
+                    metalness: 0.1,
+                    roughness: 0.3,
+                    transparent: true,
+                    opacity: 0.15,
+                    emissive: colors[index % colors.length],
+                    emissiveIntensity: 0.05,
+                });
+                const cardMesh = new THREE.Mesh(cardGeo, cardMat);
+                cardMesh.castShadow = true;
+                group.add(cardMesh);
+
+                // Borda brilhante
+                const borderGeo = new THREE.EdgesGeometry(cardGeo);
+                const borderMat = new THREE.LineBasicMaterial({
+                    color: colors[index % colors.length],
+                    transparent: true,
+                    opacity: 0.3,
+                });
+                const border = new THREE.LineSegments(borderGeo, borderMat);
+                group.add(border);
+
+                // Label CSS2D
+                const labelDiv = document.createElement('div');
+                labelDiv.innerHTML =
+                    `<strong style="color:#f8fafc;font-size:11px;">${card.title}</strong><br><span style="color:#94a3b8;font-size:9px;">${card.desc}</span>`;
+                labelDiv.style.textAlign = 'center';
+                labelDiv.style.background = 'rgba(9,13,22,0.8)';
+                labelDiv.style.padding = '6px 10px';
+                labelDiv.style.borderRadius = '10px';
+                labelDiv.style.border = '1px solid rgba(255,255,255,0.06)';
+                labelDiv.style.backdropFilter = 'blur(4px)';
+                labelDiv.style.fontSize = '11px';
+                labelDiv.style.maxWidth = '120px';
+                labelDiv.style.lineHeight = '1.3';
+
+                const label = new THREE.CSS2DObject(labelDiv);
+                label.position.set(0, 0.5, 0);
+                group.add(label);
+
+                // Pequeno pilar
+                const pillarGeo = new THREE.CylinderGeometry(0.03, 0.05, 0.3, 6);
+                const pillarMat = new THREE.MeshBasicMaterial({
+                    color: colors[index % colors.length],
+                    transparent: true,
+                    opacity: 0.2,
+                });
+                const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+                pillar.position.y = -0.25;
+                group.add(pillar);
+
+                group.userData.float = true;
+                scene.add(group);
+                roomObjects.push(group);
+            });
+
+            // --- Partículas de fundo (estilo cyber) ---
+            const particleCount = 400;
+            const particleGeo = new THREE.BufferGeometry();
+            const particlePos = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount * 3; i++) {
+                particlePos[i] = (Math.random() - 0.5) * 30;
+                if (i % 3 === 1) particlePos[i] = Math.random() * 8;
+            }
+            particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+            const particleMat = new THREE.PointsMaterial({
+                color: 0x06b6d4,
+                size: 0.04,
+                transparent: true,
+                opacity: 0.4,
+                blending: THREE.AdditiveBlending,
+            });
+            const particles = new THREE.Points(particleGeo, particleMat);
+            particles.position.y = -1;
+            scene.add(particles);
+
+            // --- Texto da missão (flutuando acima) ---
+            const missionDiv = document.createElement('div');
+            missionDiv.innerHTML =
+                '🎯 <strong style="color:#fbbf24;">Missão:</strong> <span style="color:#e2e8f0;font-size:13px;">Criar 3 fontes de renda para o Mark viajar o mundo</span>';
+            missionDiv.style.background = 'rgba(9,13,22,0.7)';
+            missionDiv.style.padding = '8px 20px';
+            missionDiv.style.borderRadius = '30px';
+            missionDiv.style.border = '1px solid rgba(251,191,36,0.2)';
+            missionDiv.style.backdropFilter = 'blur(8px)';
+            missionDiv.style.fontSize = '14px';
+            missionDiv.style.boxShadow = '0 8px 32px rgba(0,0,0,0.4)';
+            const missionLabel = new THREE.CSS2DObject(missionDiv);
+            missionLabel.position.set(0, 2.6, -1.5);
+            scene.add(missionLabel);
+
+            // --- Restrição (flutuando) ---
+            const restDiv = document.createElement('div');
+            restDiv.innerHTML = '⚠️ <span style="color:#f43f5e;font-weight:700;">Restrição:</span> <span style="color:#fecdd3;">Pelo menos 3 fontes de renda</span>';
+            restDiv.style.background = 'rgba(244,63,94,0.12)';
+            restDiv.style.padding = '4px 16px';
+            restDiv.style.borderRadius = '20px';
+            restDiv.style.border = '1px solid rgba(244,63,94,0.2)';
+            restDiv.style.backdropFilter = 'blur(4px)';
+            restDiv.style.fontSize = '12px';
+            const restLabel = new THREE.CSS2DObject(restDiv);
+            restLabel.position.set(0, 2.0, -1.5);
+            scene.add(restLabel);
+
+            // --- Essência (pergunta) ---
+            const essenceDiv = document.createElement('div');
+            essenceDiv.innerHTML = '💡 <span style="color:#c084fc;font-weight:600;">Essência:</span> <span style="color:#e2e8f0;font-style:italic;">"Como transformar ideias em um plano prático?"</span>';
+            essenceDiv.style.background = 'rgba(168,85,247,0.08)';
+            essenceDiv.style.padding = '4px 16px';
+            essenceDiv.style.borderRadius = '20px';
+            essenceDiv.style.border = '1px solid rgba(168,85,247,0.15)';
+            essenceDiv.style.backdropFilter = 'blur(4px)';
+            essenceDiv.style.fontSize = '12px';
+            const essenceLabel = new THREE.CSS2DObject(essenceDiv);
+            essenceLabel.position.set(0, 1.6, -1.5);
+            scene.add(essenceLabel);
+
+            // --- Pequenos "post-its" 3D ao redor da mesa (decoração) ---
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2 + 0.2;
+                const radius = 2.2;
+                const postDiv = document.createElement('div');
+                postDiv.textContent = ['💡', '📈', '💰', '🌍', '📊', '🚀'][i];
+                postDiv.style.fontSize = '24px';
+                postDiv.style.filter = 'drop-shadow(0 0 10px rgba(6,182,212,0.2))';
+                const postLabel = new THREE.CSS2DObject(postDiv);
+                postLabel.position.set(
+                    Math.cos(angle) * radius,
+                    0.15 + Math.sin(i * 1.5) * 0.05,
+                    Math.sin(angle) * radius
+                );
+                scene.add(postLabel);
+            }
+        }
+
+        // ============================================================
+        // 6. FIREBASE – IDEIAS
+        // ============================================================
+        function listenIdeas() {
+            const ref = db.ref('ideas');
+            ref.on('value', (snap) => {
+                const data = snap.val() || {};
+                const entries = Object.entries(data);
+
+                if (entries.length === 0) {
+                    ideasList.innerHTML = '<span class="empty-ideas">Aguardando contribuições...</span>';
+                    return;
+                }
+
+                let html = '';
+                entries.forEach(([name, text]) => {
+                    // Proteção contra XSS
+                    const safeName = name.replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"':
+                            '&quot;' } [m] || m));
+                    const safeText = text.replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"':
+                            '&quot;' } [m] || m));
+                    html += `<div class="idea-item-3d"><strong>${safeName}</strong>: ${safeText}</div>`;
+                });
+                ideasList.innerHTML = html;
+
+                // Atualiza o input se for a própria ideia
+                if (data[currentUser]) {
+                    ideaInput.value = data[currentUser];
+                }
+            });
+        }
+
+        function loadUserIdea() {
+            if (!currentUser) return;
+            db.ref('ideas/' + currentUser).once('value', (snap) => {
+                if (snap.val()) {
+                    ideaInput.value = snap.val();
+                }
+            });
+        }
+
+        // Enviar ideia
+        sendIdeaBtn.addEventListener('click', sendIdea);
+        ideaInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendIdea();
+        });
+
+        function sendIdea() {
+            const text = ideaInput.value.trim();
+            if (text === '' || !currentUser) return;
+            db.ref('ideas/' + currentUser).set(text);
+            // Feedback visual
+            sendIdeaBtn.innerHTML = '<i class="fa-regular fa-check"></i> Enviado!';
+            setTimeout(() => {
+                sendIdeaBtn.innerHTML = '<i class="fa-regular fa-paper-plane"></i> Enviar';
+            }, 1200);
+        }
+
+        // ============================================================
+        // 7. FIREBASE – VOTAÇÃO
+        // ============================================================
+        function listenVotes() {
+            const ref = db.ref('votes');
+            ref.on('value', (snap) => {
+                const data = snap.val() || {};
+                let viable = 0,
+                    bold = 0;
+                Object.values(data).forEach(v => {
+                    if (v === 'viable') viable++;
+                    else if (v === 'bold') bold++;
+                });
+                countViable.textContent = viable;
+                countBold.textContent = bold;
+
+                // Voto do usuário atual
+                if (data[currentUser]) {
+                    const vote = data[currentUser];
+                    myVoteDisplay.textContent = vote === 'viable' ? 'Viável' : 'Ousada';
+                    // Destacar botões
+                    voteViable.classList.toggle('voted-viable', vote === 'viable');
+                    voteBold.classList.toggle('voted-bold', vote === 'bold');
+                } else {
+                    myVoteDisplay.textContent = '—';
+                    voteViable.classList.remove('voted-viable');
+                    voteBold.classList.remove('voted-bold');
+                }
+            });
+        }
+
+        voteViable.addEventListener('click', () => {
+            if (!currentUser) return;
+            db.ref('votes/' + currentUser).set('viable');
+        });
+
+        voteBold.addEventListener('click', () => {
+            if (!currentUser) return;
+            db.ref('votes/' + currentUser).set('bold');
+        });
+
+        // ============================================================
+        // 8. INICIALIZAÇÃO
+        // ============================================================
+        // Garante que o campo customName fique oculto se não for "Outro"
+        if (profileSelect.value !== 'Outro') {
+            customName.classList.add('hidden');
+        }
+
+        console.log('🚀 Sala 3D de Investimentos carregada!');
+        console.log('📡 Firebase:', firebaseConfig.databaseURL);
+    </script>
+
+</body>
+</html>
