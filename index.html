@@ -1,784 +1,1625 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Active Learning Platform — Daily Themes</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🎧 Listening Lab · Mission Control</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js">
+    </script>
     <style>
-        .hidden-screen { display: none !important; }
-
-        @keyframes star-pop {
-            0% { transform: scale(1) rotate(0deg); }
-            50% { transform: scale(1.4) rotate(15deg); filter: drop-shadow(0 0 8px #f59e0b); }
-            100% { transform: scale(1) rotate(0deg); }
+        /* ===== BASE ===== */
+        * {
+            box-sizing: border-box;
         }
-        .star-active {
-            animation: star-pop 0.3s ease-in-out;
-            opacity: 1 !important;
-            color: #f59e0b;
+        body {
+            background: linear-gradient(145deg, #0b0f1c 0%, #1a1f33 100%);
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: #e8edf5;
         }
 
-        .room-btn { transition: 0.15s; }
-        .room-btn.room-active {
-            background: #4f46e5 !important;
-            color: white !important;
-            box-shadow: 0 0 0 2px #4f46e5, 0 0 12px rgba(79,70,229,0.4);
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e243b;
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4f46e5;
+            border-radius: 8px;
         }
 
-        textarea.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-
-        /* ---- Game-style activity screen ---- */
-        @keyframes float-badge {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-3px); }
+        /* ===== UTILITY ===== */
+        .hidden-screen {
+            display: none !important;
         }
-        .mission-icon { animation: float-badge 2.6s ease-in-out infinite; }
+        .glass {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-light {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
 
-        .role-card { transition: transform .15s ease, box-shadow .15s ease; }
-        .role-card:hover { transform: translateY(-2px); }
-        .role-card.role-you { box-shadow: 0 0 0 2px currentColor inset; }
+        /* ===== GLOW ===== */
+        .glow-indigo {
+            box-shadow: 0 0 40px -8px rgba(79, 70, 229, 0.3);
+        }
+        .glow-emerald {
+            box-shadow: 0 0 40px -8px rgba(52, 211, 153, 0.25);
+        }
+        .glow-amber {
+            box-shadow: 0 0 40px -8px rgba(251, 191, 36, 0.25);
+        }
 
-        .opt-card { transition: transform .15s ease, box-shadow .15s ease; }
-        .opt-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        /* ===== CARDS ===== */
+        .mission-card {
+            transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            cursor: default;
+            position: relative;
+            overflow: hidden;
+        }
+        .mission-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1.5px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent 60%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        .mission-card.available {
+            cursor: pointer;
+        }
+        .mission-card.available:hover {
+            transform: translateY(-6px) scale(1.01);
+            border-color: rgba(79, 70, 229, 0.4);
+        }
+        .mission-card.locked {
+            opacity: 0.5;
+            filter: grayscale(0.6);
+        }
+        .mission-card.completed {
+            border-color: rgba(52, 211, 153, 0.3);
+        }
 
-        details.audio-drawer > summary { list-style: none; }
-        details.audio-drawer > summary::-webkit-details-marker { display: none; }
-        details.audio-drawer[open] .audio-chevron { transform: rotate(180deg); }
-        .audio-chevron { transition: transform .2s ease; }
+        /* ===== STARS ===== */
+        .star-filled {
+            color: #fbbf24;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+        }
+        .star-empty {
+            color: #334155;
+        }
+
+        /* ===== PROGRESS RING ===== */
+        .progress-ring {
+            transition: stroke-dashoffset 0.8s ease;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            border-radius: 9999px;
+            transition: all 0.25s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 20px -4px rgba(79, 70, 229, 0.35);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px -6px rgba(79, 70, 229, 0.5);
+        }
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            border-radius: 9999px;
+            transition: all 0.25s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 20px -4px rgba(16, 185, 129, 0.3);
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px -6px rgba(16, 185, 129, 0.45);
+        }
+
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.06);
+            color: #c8d0e0;
+            font-weight: 500;
+            padding: 0.6rem 1.5rem;
+            border-radius: 9999px;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+        }
+        .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+
+        /* ===== AUDIO PLAYER ===== */
+        .audio-wave {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 48px;
+        }
+        .audio-wave .bar {
+            width: 4px;
+            border-radius: 4px;
+            background: linear-gradient(180deg, #4f46e5, #7c3aed);
+            transition: height 0.2s ease;
+            height: 12px;
+        }
+        .audio-wave .bar:nth-child(1) {
+            height: 18px;
+        }
+        .audio-wave .bar:nth-child(2) {
+            height: 28px;
+        }
+        .audio-wave .bar:nth-child(3) {
+            height: 14px;
+        }
+        .audio-wave .bar:nth-child(4) {
+            height: 34px;
+        }
+        .audio-wave .bar:nth-child(5) {
+            height: 22px;
+        }
+        .audio-wave .bar:nth-child(6) {
+            height: 38px;
+        }
+        .audio-wave .bar:nth-child(7) {
+            height: 16px;
+        }
+        .audio-wave .bar:nth-child(8) {
+            height: 26px;
+        }
+        .audio-wave .bar:nth-child(9) {
+            height: 32px;
+        }
+        .audio-wave .bar:nth-child(10) {
+            height: 20px;
+        }
+        .audio-wave .bar:nth-child(11) {
+            height: 30px;
+        }
+        .audio-wave .bar:nth-child(12) {
+            height: 14px;
+        }
+        .audio-wave .bar:nth-child(13) {
+            height: 24px;
+        }
+        .audio-wave .bar:nth-child(14) {
+            height: 36px;
+        }
+        .audio-wave .bar:nth-child(15) {
+            height: 18px;
+        }
+        .audio-wave .bar:nth-child(16) {
+            height: 28px;
+        }
+
+        .audio-wave.playing .bar {
+            animation: wave-bounce 0.5s ease-in-out infinite alternate;
+        }
+        .audio-wave.playing .bar:nth-child(2n) {
+            animation-delay: 0.1s;
+        }
+        .audio-wave.playing .bar:nth-child(3n) {
+            animation-delay: 0.2s;
+        }
+
+        @keyframes wave-bounce {
+            0% {
+                transform: scaleY(0.5);
+            }
+            100% {
+                transform: scaleY(1);
+            }
+        }
+
+        /* ===== QUESTION CARDS ===== */
+        .q-card {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 1rem 1.25rem;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .q-card.correct {
+            border-color: rgba(52, 211, 153, 0.4);
+            background: rgba(52, 211, 153, 0.06);
+        }
+        .q-card.wrong {
+            border-color: rgba(239, 68, 68, 0.35);
+            background: rgba(239, 68, 68, 0.06);
+        }
+
+        /* ===== OPTIONS ===== */
+        .option-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .option-label:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        .option-label input[type="radio"] {
+            accent-color: #4f46e5;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+        .option-label.correct-answer {
+            border-color: rgba(52, 211, 153, 0.5);
+            background: rgba(52, 211, 153, 0.08);
+        }
+        .option-label.wrong-answer {
+            border-color: rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        /* ===== INPUT TEXT ===== */
+        .input-game {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 0.7rem 1rem;
+            color: #e8edf5;
+            width: 100%;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+        .input-game:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+        .input-game::placeholder {
+            color: #6b7299;
+        }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* ===== TEACHER PANEL ===== */
+        .teacher-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 0.6rem 1rem;
+            color: #e8edf5;
+            width: 100%;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        .teacher-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+        }
+        .teacher-input::placeholder {
+            color: #6b7299;
+        }
+        .teacher-textarea {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 0.6rem 1rem;
+            color: #e8edf5;
+            width: 100%;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            resize: vertical;
+            min-height: 80px;
+        }
+        .teacher-textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .fade-up {
+            animation: fadeUp 0.5s ease forwards;
+        }
+
+        @keyframes pulse-glow {
+            0%,
+            100% {
+                box-shadow: 0 0 20px -4px rgba(79, 70, 229, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 40px -4px rgba(79, 70, 229, 0.4);
+            }
+        }
+        .pulse-glow {
+            animation: pulse-glow 2.5s ease-in-out infinite;
+        }
+
+        @keyframes starPop {
+            0% {
+                transform: scale(0) rotate(-20deg);
+                opacity: 0;
+            }
+            60% {
+                transform: scale(1.3) rotate(8deg);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1) rotate(0);
+            }
+        }
+        .star-pop {
+            animation: starPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(-20px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(120px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* ===== MISSION PROGRESS ===== */
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .step-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            transition: all 0.3s ease;
+        }
+        .step-dot.active {
+            background: #4f46e5;
+            box-shadow: 0 0 16px rgba(79, 70, 229, 0.4);
+        }
+        .step-dot.done {
+            background: #10b981;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 640px) {
+            .mission-card-grid {
+                grid-template-columns: 1fr !important;
+            }
+            .btn-primary,
+            .btn-success {
+                padding: 0.6rem 1.5rem;
+                font-size: 0.9rem;
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+<body>
 
-    <!-- MAIN CONTAINER -->
-    <div class="max-w-4xl mx-auto p-4 md:p-6">
+    <!-- ============================================================ -->
+    <!-- SCREEN 1: LANDING / SETUP                                     -->
+    <!-- ============================================================ -->
+    <div id="screen-landing" class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-lg glass rounded-3xl p-8 md:p-10 glow-indigo fade-up">
+            <div class="text-center mb-8">
+                <div class="text-5xl mb-3">🎧</div>
+                <h1 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Listening Lab</h1>
+                <p class="text-indigo-300 font-medium text-sm tracking-widest uppercase mt-1">Mission Control</p>
+                <div class="h-1 w-16 bg-indigo-500/40 rounded-full mx-auto mt-3"></div>
+                <p class="text-slate-400 text-sm mt-4 max-w-xs mx-auto">
+                    Complete 3 missions to earn your badge. Listen, answer, and conquer.
+                </p>
+            </div>
 
-        <!-- SCREEN 1: REGISTRATION / SETUP -->
-        <div id="screen-setup" class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
-            <h2 class="text-2xl font-bold text-slate-900 mb-6">Welcome to Daily English</h2>
-            <form id="form-setup" class="space-y-4">
+            <form id="form-setup" class="space-y-5">
                 <div>
-                    <label class="block text-sm font-medium mb-1">Your Name</label>
-                    <input type="text" id="input-name" required placeholder="Type your full name" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-sm font-medium text-slate-300 mb-1.5">Your Agent Name</label>
+                    <input type="text" id="input-name" required placeholder="Enter your full name..." class="input-game">
                 </div>
-                <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition shadow-sm">Continue to Lobby</button>
+                <button type="submit" class="btn-primary w-full text-base flex items-center justify-center gap-2">
+                    <span>🚀</span> Start Mission
+                </button>
             </form>
+
+            <div class="mt-6 text-center">
+                <button onclick="showTeacherPanel()" class="text-xs text-slate-500 hover:text-slate-300 transition underline-offset-2 hover:underline">
+                    ⚙️ Teacher Panel
+                </button>
+            </div>
         </div>
+    </div>
 
-        <!-- SCREEN 2: SMART LOBBY (Daily Vocab & Reflection) -->
-        <div id="screen-lobby" class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hidden-screen space-y-6">
-            <div class="text-center space-y-2">
-                <span id="lobby-date-badge" class="inline-block px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold uppercase tracking-wide">Today's Topic</span>
-                <h2 id="lobby-theme-title" class="text-2xl font-bold text-slate-900">Loading daily theme...</h2>
-            </div>
+    <!-- ============================================================ -->
+    <!-- SCREEN 2: DASHBOARD                                          -->
+    <!-- ============================================================ -->
+    <div id="screen-dashboard" class="min-h-screen p-4 md:p-6 hidden-screen">
+        <div class="max-w-5xl mx-auto">
 
-            <!-- Daily Warm-up Text -->
-            <div id="lobby-text-card" class="p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-slate-700 text-sm leading-relaxed">
-                Loading introduction...
-            </div>
-
-            <!-- Vocabulary Cards with Definitions -->
-            <div class="space-y-2">
-                <h3 class="font-semibold text-slate-900 text-xs uppercase tracking-wide text-slate-500">📖 Key Vocabulary</h3>
-                <div id="lobby-vocab-list" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <!-- Injected by JS -->
+            <!-- Header -->
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-white">🎧 Listening Lab</h1>
+                    <p class="text-slate-400 text-sm" id="dash-welcome">Welcome, <span class="text-indigo-300 font-medium" id="dash-name">Agent</span></p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="glass-light px-4 py-2 rounded-full text-sm">
+                        <span class="text-slate-400">Points</span>
+                        <span class="text-amber-400 font-bold ml-1" id="dash-points">0</span>
+                    </div>
+                    <button onclick="showTeacherPanel()" class="btn-ghost text-xs">⚙️</button>
                 </div>
             </div>
 
-            <!-- Reflection Questions -->
-            <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <h3 class="font-semibold text-slate-900 text-sm border-b pb-2">🤔 Questions for Reflection (Think while you wait):</h3>
-                <ul id="lobby-questions-list" class="list-disc list-inside space-y-2 text-sm text-slate-600"></ul>
+            <!-- Progress Overview -->
+            <div class="glass rounded-2xl p-5 mb-6">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <span class="text-sm font-medium text-slate-300">Overall Progress</span>
+                    <span class="text-sm text-slate-400" id="dash-progress-text">0 / 3 missions</span>
+                </div>
+                <div class="h-2 bg-white/10 rounded-full mt-2 overflow-hidden">
+                    <div id="dash-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-700" style="width:0%"></div>
+                </div>
             </div>
 
-            <div class="flex items-center justify-center space-x-3 text-sm text-indigo-600 font-medium py-2 border-t pt-4">
-                <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Your teacher is assigning you to a breakout room. Please wait...</span>
-            </div>
-        </div>
-
-        <!-- SCREEN 3: MAIN ROLE-PLAY ACTIVITY (GAME STYLE) -->
-        <div id="screen-activity" class="rounded-2xl shadow-sm border border-slate-200 hidden-screen overflow-hidden bg-white">
-
-            <!-- Themed banner: timer + scenario badge + mission -->
-            <div id="activity-banner" class="p-5 md:p-6 text-white bg-gradient-to-br from-indigo-600 to-violet-700">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2 bg-black/20 backdrop-blur px-3 py-1.5 rounded-full font-mono font-bold text-sm">
-                        <span>⏱</span>
-                        <span id="timer-display">30:00</span>
+            <!-- Mission Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mission-card-grid" id="mission-cards">
+                <!-- Mission A -->
+                <div class="mission-card glass rounded-2xl p-5 available" data-mission="a" id="card-a">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-indigo-400">Mission 1</span>
+                            <h3 class="text-lg font-bold text-white mt-0.5">Earnings Call</h3>
+                            <p class="text-xs text-slate-400 mt-1">Fill in the missing numbers</p>
+                        </div>
+                        <div class="text-2xl" id="card-a-stars">☆☆☆</div>
                     </div>
-                    <div class="flex items-center gap-2 bg-black/20 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">
-                        <span id="scenario-icon">🎮</span>
-                        <span id="scenario-title-badge">Scenario</span>
+                    <div class="mt-3 flex items-center justify-between">
+                        <span class="text-xs text-slate-500" id="card-a-status">🔓 Available</span>
+                        <span class="text-xs text-slate-500" id="card-a-score">0 pts</span>
                     </div>
+                    <button onclick="launchMission('a')" class="mt-3 w-full py-2 bg-indigo-600/30 hover:bg-indigo-600/50 rounded-xl text-sm font-medium text-indigo-300 transition border border-indigo-500/20">
+                        ▶ Launch
+                    </button>
                 </div>
 
-                <div class="mt-4 flex items-start gap-3 bg-black/15 backdrop-blur rounded-2xl p-4">
-                    <span class="text-2xl mission-icon">🎯</span>
+                <!-- Mission B -->
+                <div class="mission-card glass rounded-2xl p-5 locked" data-mission="b" id="card-b">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Mission 2</span>
+                            <h3 class="text-lg font-bold text-white/60 mt-0.5">Tone &amp; Diplomacy</h3>
+                            <p class="text-xs text-slate-500 mt-1">Choose the best interpretation</p>
+                        </div>
+                        <div class="text-2xl text-slate-600">☆☆☆</div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between">
+                        <span class="text-xs text-slate-500" id="card-b-status">🔒 Locked</span>
+                        <span class="text-xs text-slate-500" id="card-b-score">—</span>
+                    </div>
+                    <button disabled class="mt-3 w-full py-2 bg-white/5 rounded-xl text-sm font-medium text-slate-600 cursor-not-allowed border border-white/5">
+                        🔒 Locked
+                    </button>
+                </div>
+
+                <!-- Mission C -->
+                <div class="mission-card glass rounded-2xl p-5 locked" data-mission="c" id="card-c">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Mission 3</span>
+                            <h3 class="text-lg font-bold text-white/60 mt-0.5">Boardroom Debate</h3>
+                            <p class="text-xs text-slate-500 mt-1">Mark arguments &amp; decide winner</p>
+                        </div>
+                        <div class="text-2xl text-slate-600">☆☆☆</div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between">
+                        <span class="text-xs text-slate-500" id="card-c-status">🔒 Locked</span>
+                        <span class="text-xs text-slate-500" id="card-c-score">—</span>
+                    </div>
+                    <button disabled class="mt-3 w-full py-2 bg-white/5 rounded-xl text-sm font-medium text-slate-600 cursor-not-allowed border border-white/5">
+                        🔒 Locked
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-8 text-center text-xs text-slate-600">
+                <span>💡 Complete Mission 1 to unlock Mission 2, then Mission 3.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SCREEN 3: MISSION PLAY                                       -->
+    <!-- ============================================================ -->
+    <div id="screen-mission" class="min-h-screen p-4 md:p-6 hidden-screen">
+        <div class="max-w-4xl mx-auto">
+
+            <!-- Mission Header -->
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <button onclick="goToDashboard()" class="text-slate-400 hover:text-white text-sm transition flex items-center gap-1.5">
+                        ← Back
+                    </button>
+                    <h2 class="text-xl md:text-2xl font-bold text-white mt-1" id="mission-title">Mission</h2>
+                    <p class="text-slate-400 text-sm" id="mission-subtitle">Loading...</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="glass-light px-3 py-1.5 rounded-full text-sm">
+                        <span class="text-slate-400">Score</span>
+                        <span class="text-amber-400 font-bold ml-1" id="mission-score">0</span>
+                    </div>
+                    <div class="text-2xl" id="mission-stars-display">☆☆☆</div>
+                </div>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="flex items-center gap-2 mb-5">
+                <div class="step-dot active" id="step-dot-1"></div>
+                <div class="h-0.5 w-8 bg-white/10" id="step-line-1"></div>
+                <div class="step-dot" id="step-dot-2"></div>
+                <div class="h-0.5 w-8 bg-white/10" id="step-line-2"></div>
+                <div class="step-dot" id="step-dot-3"></div>
+                <span class="text-xs text-slate-500 ml-2" id="step-label">Step 1: Listen</span>
+            </div>
+
+            <!-- Audio Section -->
+            <div class="glass rounded-2xl p-5 md:p-6 mb-5">
+                <div class="flex flex-col md:flex-row items-center gap-4">
+                    <div class="flex-1 w-full">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-sm font-medium text-slate-300">🎵 Audio</span>
+                            <span class="text-xs text-slate-500" id="audio-status">Ready</span>
+                        </div>
+                        <div id="audio-player-container" class="w-full"></div>
+                    </div>
+                    <button id="mission-play-btn" class="btn-primary flex-shrink-0 px-6 py-3 text-base flex items-center gap-2">
+                        <span>▶</span> Play
+                    </button>
+                </div>
+                <div class="mt-3 text-xs text-slate-500 flex items-center gap-2">
+                    <span>💡</span> Listen carefully, then answer the questions below.
+                </div>
+            </div>
+
+            <!-- Questions Section -->
+            <div class="glass rounded-2xl p-5 md:p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-white">📝 Questions</h3>
+                    <span class="text-xs text-slate-500" id="question-counter">0 / 0</span>
+                </div>
+                <div id="mission-questions" class="space-y-4"></div>
+
+                <div class="mt-6 flex flex-wrap gap-3">
+                    <button id="mission-check-btn" class="btn-success flex items-center gap-2">
+                        <span>✅</span> Check Answers
+                    </button>
+                    <button id="mission-reset-btn" class="btn-ghost text-sm">
+                        🔄 Reset
+                    </button>
+                </div>
+
+                <div id="mission-feedback" class="mt-4 text-sm font-medium"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SCREEN 4: TEACHER PANEL                                      -->
+    <!-- ============================================================ -->
+    <div id="screen-teacher" class="min-h-screen p-4 md:p-6 hidden-screen">
+        <div class="max-w-5xl mx-auto">
+
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-white">⚙️ Teacher Panel</h1>
+                    <p class="text-slate-400 text-sm">Configure missions, upload audio, and generate questions with AI.</p>
+                </div>
+                <button onclick="goToDashboard()" class="btn-ghost text-sm">← Back</button>
+            </div>
+
+            <!-- Tabs for A, B, C -->
+            <div class="flex gap-2 mb-5 flex-wrap">
+                <button class="teacher-tab px-5 py-2 rounded-xl text-sm font-medium bg-indigo-600/30 text-white border border-indigo-500/30" data-tab="tabA">A · Earnings</button>
+                <button class="teacher-tab px-5 py-2 rounded-xl text-sm font-medium bg-white/5 text-slate-400 border border-white/5" data-tab="tabB">B · Tone</button>
+                <button class="teacher-tab px-5 py-2 rounded-xl text-sm font-medium bg-white/5 text-slate-400 border border-white/5" data-tab="tabC">C · Boardroom</button>
+            </div>
+
+            <!-- Tab A -->
+            <div id="tabA" class="teacher-tab-content glass rounded-2xl p-5 space-y-4">
+                <h3 class="font-bold text-indigo-400 text-lg">📊 Mission A — Earnings Call</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider opacity-80 block mb-0.5">Your Mission</span>
-                        <p class="text-sm font-medium leading-snug" id="mission-display">Loading scenario...</p>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio File (MP3)</label>
+                        <input type="text" id="teacher-a-file" class="teacher-input" placeholder="/audio/a.mp3 or https://..." value="https://www.w3schools.com/html/horse.mp3">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio URL (iframe fallback)</label>
+                        <input type="text" id="teacher-a-url" class="teacher-input" placeholder="https://whyp.it/embeds/..." value="">
                     </div>
                 </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Transcript / Summary</label>
+                    <textarea id="teacher-a-summary" rows="5" class="teacher-textarea" placeholder="Paste the transcript here to generate questions..."></textarea>
+                </div>
+                <div class="flex flex-wrap gap-3 items-center">
+                    <button id="teacher-a-generate" class="btn-primary text-sm py-2 px-5">🤖 Generate Questions</button>
+                    <span id="teacher-a-status" class="text-xs text-slate-500"></span>
+                </div>
+                <div id="teacher-a-preview" class="hidden-screen space-y-3 border-t border-white/10 pt-4">
+                    <label class="block text-xs font-medium text-slate-400">Generated Questions (JSON)</label>
+                    <textarea id="teacher-a-questions" rows="8" class="teacher-textarea font-mono text-xs"></textarea>
+                    <button id="teacher-a-save" class="btn-success text-sm py-2 px-5">💾 Save to Firebase</button>
+                </div>
             </div>
 
-            <div class="p-5 md:p-6 space-y-5">
-
-                <!-- Role cards: You vs Partner -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div id="info-person-a" class="role-card rounded-2xl border-2 p-4 text-center space-y-1.5">
-                        <div id="person-a-avatar" class="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-2xl bg-white/70">🧑</div>
-                        <span id="person-a-role-title" class="inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">Role A</span>
-                        <p class="font-semibold text-slate-900 text-sm" id="person-a-name">Waiting...</p>
-                        <p class="text-[11px] text-slate-500" id="person-a-focus"></p>
+            <!-- Tab B -->
+            <div id="tabB" class="teacher-tab-content glass rounded-2xl p-5 space-y-4 hidden-screen">
+                <h3 class="font-bold text-indigo-400 text-lg">🎭 Mission B — Tone &amp; Diplomacy</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio File (MP3)</label>
+                        <input type="text" id="teacher-b-file" class="teacher-input" placeholder="/audio/b.mp3" value="https://www.w3schools.com/html/horse.mp3">
                     </div>
-
-                    <div id="info-person-b" class="role-card rounded-2xl border-2 p-4 text-center space-y-1.5">
-                        <div id="person-b-avatar" class="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-2xl bg-white/70">🧑</div>
-                        <span id="person-b-role-title" class="inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">Role B</span>
-                        <p class="font-semibold text-slate-900 text-sm" id="person-b-name">Waiting for partner...</p>
-                        <p class="text-[11px] text-slate-500" id="person-b-focus"></p>
-                    </div>
-                </div>
-
-                <!-- Audio, tucked away to keep the screen minimal -->
-                <details class="audio-drawer rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
-                    <summary class="cursor-pointer px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-slate-500 flex items-center justify-between">
-                        <span>🎧 Today's Audio</span>
-                        <span class="audio-chevron">⌄</span>
-                    </summary>
-                    <div id="activity-audio-container" class="p-3 pt-0"></div>
-                </details>
-
-                <!-- Choices: reduced, game-card style -->
-                <div class="space-y-2">
-                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500" id="choices-box-title">Choices</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div class="bg-indigo-50/60 p-3.5 rounded-2xl border-2 border-indigo-100 space-y-2.5">
-                            <span class="text-[11px] font-bold uppercase text-indigo-700 block" id="my-answers-label">✏️ You</span>
-                            <div id="my-fields-container" class="space-y-2.5"></div>
-                        </div>
-                        <div class="bg-slate-100/70 p-3.5 rounded-2xl border-2 border-slate-200 space-y-2.5">
-                            <div class="flex items-center justify-between">
-                                <span class="text-[11px] font-bold uppercase text-slate-500">👀 Partner</span>
-                                <span class="text-[11px] text-indigo-600 font-semibold" id="choices-partner-name">—</span>
-                            </div>
-                            <div id="partner-fields-container" class="space-y-2.5"></div>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio URL (iframe fallback)</label>
+                        <input type="text" id="teacher-b-url" class="teacher-input" placeholder="https://whyp.it/embeds/..." value="">
                     </div>
                 </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <button id="btn-options" class="py-3 rounded-2xl font-bold text-sm text-white shadow-sm bg-indigo-600 hover:bg-indigo-700 transition">📋 Options</button>
-                    <button id="btn-help-friend" class="py-3 rounded-2xl font-bold text-sm border-2 border-slate-300 bg-white hover:bg-slate-50 transition">💡 Help friend</button>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Transcript / Summary</label>
+                    <textarea id="teacher-b-summary" rows="5" class="teacher-textarea" placeholder="Paste the transcript here..."></textarea>
                 </div>
-
-                <button id="btn-to-wrapup" class="w-full py-3 rounded-2xl font-bold text-white text-sm shadow bg-slate-900 hover:bg-slate-800 transition">Next Phase →</button>
-            </div>
-        </div>
-
-        <!-- SCREEN 4: WRAP-UP -->
-        <div id="screen-wrapup" class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hidden-screen space-y-6">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h2 class="text-2xl font-bold text-slate-900">Screen 4 · Wrap-up</h2>
-                <button id="btn-back-to-activity" class="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-semibold">← Back to Activity</button>
-            </div>
-
-            <div class="space-y-2">
-                <h3 class="text-sm font-bold text-slate-700">What we created together</h3>
-                <div id="created-summary" class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm space-y-1 text-slate-700"></div>
-            </div>
-
-            <div class="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-2">
-                <h3 class="text-sm font-bold text-indigo-900">Questions for Oral Reflection:</h3>
-                <ul class="list-disc list-inside text-sm text-slate-700 space-y-1">
-                    <li>Did your plan work out as expected? What was easy or difficult?</li>
-                    <li>What is the main lesson you learned from each other today?</li>
-                </ul>
-            </div>
-
-            <div class="space-y-4 border-t pt-4">
-                <h3 class="text-sm font-bold text-slate-800">Rate <span id="friend-name-stars" class="text-indigo-600">your partner</span>'s Communication Skills:</h3>
-                <div id="skills-rating-container" class="space-y-3"></div>
-            </div>
-
-            <div class="flex items-center gap-3 pt-2">
-                <input type="text" id="signature-input" placeholder="Type your name to sign" class="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
-                <button id="btn-sign" onclick="alert('Signed successfully!')" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 text-sm">Sign</button>
-            </div>
-
-            <button onclick="window.print()" class="w-full py-3 bg-white border border-slate-300 rounded-xl font-medium hover:bg-slate-50 flex items-center justify-center gap-2 text-sm shadow-sm">🖨 Print homework</button>
-        </div>
-
-        <!-- TEACHER CONTROL PANEL -->
-        <div id="screen-teacher" class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hidden-screen space-y-6">
-            <h2 class="text-2xl font-bold text-slate-900 border-b pb-3">Teacher Control Panel — Daily Themes Setup</h2>
-
-            <!-- Setup Initial 2 Daily Themes in Firebase -->
-            <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 space-y-3">
-                <h3 class="font-semibold text-sm text-indigo-900">📅 Seed Test Themes (Day 1 & Day 2)</h3>
-                <p class="text-xs text-slate-600">Click below to load the 2 test themes into Firebase so students automatically get today's theme based on the date.</p>
-                <button onclick="seedDailyThemes()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700">🚀 Publish Test Themes to Firebase</button>
-                <span id="seed-status" class="text-xs text-emerald-600 font-medium ml-2"></span>
-            </div>
-
-            <!-- Central Timer Controls -->
-            <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
-                <h3 class="font-semibold text-sm text-slate-700">Activity Timer Control (All Rooms)</h3>
-                <div class="flex gap-2">
-                    <button onclick="controlTimer('play')" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">▶ Play</button>
-                    <button onclick="controlTimer('pause')" class="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700">⏸ Pause</button>
-                    <button onclick="controlTimer('reset')" class="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700">🔄 Reset (30m)</button>
+                <div class="flex flex-wrap gap-3 items-center">
+                    <button id="teacher-b-generate" class="btn-primary text-sm py-2 px-5">🤖 Generate Questions</button>
+                    <span id="teacher-b-status" class="text-xs text-slate-500"></span>
+                </div>
+                <div id="teacher-b-preview" class="hidden-screen space-y-3 border-t border-white/10 pt-4">
+                    <label class="block text-xs font-medium text-slate-400">Generated Questions (JSON)</label>
+                    <textarea id="teacher-b-questions" rows="8" class="teacher-textarea font-mono text-xs"></textarea>
+                    <button id="teacher-b-save" class="btn-success text-sm py-2 px-5">💾 Save to Firebase</button>
                 </div>
             </div>
 
-            <!-- Student Management & Breakout Rooms -->
-            <div class="space-y-4 border-t pt-4">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-semibold text-sm text-slate-700">Assign Students to Rooms</h3>
-                    <div class="flex gap-2">
-                        <button id="btn-add-room" class="px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-xs font-semibold">+ Add Room</button>
-                        <button onclick="clearAllStudents()" class="px-3 py-1.5 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded-lg text-xs font-semibold border border-rose-200">🧹 Clear All Students</button>
+            <!-- Tab C -->
+            <div id="tabC" class="teacher-tab-content glass rounded-2xl p-5 space-y-4 hidden-screen">
+                <h3 class="font-bold text-indigo-400 text-lg">⚔️ Mission C — Boardroom Debate</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio File (MP3)</label>
+                        <input type="text" id="teacher-c-file" class="teacher-input" placeholder="/audio/c.mp3" value="https://www.w3schools.com/html/horse.mp3">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio URL (iframe fallback)</label>
+                        <input type="text" id="teacher-c-url" class="teacher-input" placeholder="https://whyp.it/embeds/..." value="">
                     </div>
                 </div>
-                <div id="teacher-students-list" class="space-y-2 text-sm"></div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Transcript / Summary</label>
+                    <textarea id="teacher-c-summary" rows="5" class="teacher-textarea" placeholder="Paste the transcript here..."></textarea>
+                </div>
+                <div class="flex flex-wrap gap-3 items-center">
+                    <button id="teacher-c-generate" class="btn-primary text-sm py-2 px-5">🤖 Generate Questions</button>
+                    <span id="teacher-c-status" class="text-xs text-slate-500"></span>
+                </div>
+                <div id="teacher-c-preview" class="hidden-screen space-y-3 border-t border-white/10 pt-4">
+                    <label class="block text-xs font-medium text-slate-400">Generated Questions (JSON)</label>
+                    <textarea id="teacher-c-questions" rows="8" class="teacher-textarea font-mono text-xs"></textarea>
+                    <button id="teacher-c-save" class="btn-success text-sm py-2 px-5">💾 Save to Firebase</button>
+                </div>
             </div>
-        </div>
 
-    </div>
-
-    <!-- SUPPORT MODALS -->
-    <div id="modal-container" class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 hidden-screen">
-        <div class="bg-white p-6 rounded-2xl max-w-lg w-full space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 id="modal-title" class="font-bold text-lg text-slate-900 border-b pb-2">Modal Title</h3>
-            <div id="modal-body" class="text-sm text-slate-600 space-y-3"></div>
-            <button onclick="closeModal()" class="w-full py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200">Close</button>
+            <div class="mt-6 text-xs text-slate-500 glass rounded-xl p-4">
+                <p>📡 Data saved under <code class="text-indigo-300">/activities</code> in Firebase. Students see updates live.</p>
+                <p class="mt-1">🔑 Groq API key is hardcoded for demo. Replace <code class="text-indigo-300">GROQ_API_KEY</code> in the script.</p>
+            </div>
         </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- MODAL: RESULTS                                               -->
+    <!-- ============================================================ -->
+    <div id="modal-container" class="fixed inset-0 modal-overlay flex items-center justify-center p-4 hidden-screen z-50">
+        <div class="glass rounded-3xl p-6 md:p-8 max-w-lg w-full glow-indigo fade-up">
+            <div class="text-center">
+                <div id="modal-stars" class="text-5xl mb-2">☆☆☆</div>
+                <h3 id="modal-title" class="text-2xl font-bold text-white">Mission Complete!</h3>
+                <p id="modal-subtitle" class="text-slate-400 text-sm mt-1">Great work, agent.</p>
+            </div>
+            <div class="my-5 p-4 glass-light rounded-2xl">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">Points Earned</span>
+                    <span class="text-amber-400 font-bold" id="modal-points">0</span>
+                </div>
+                <div class="flex justify-between text-sm mt-2">
+                    <span class="text-slate-400">Accuracy</span>
+                    <span class="text-emerald-400 font-bold" id="modal-accuracy">0%</span>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="modal-next-btn" class="btn-primary flex-1 flex items-center justify-center gap-2">
+                    <span>→</span> Next Mission
+                </button>
+                <button onclick="closeModal()" class="btn-ghost flex-1">Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- JAVASCRIPT                                                   -->
+    <!-- ============================================================ -->
     <script>
+        // =============================================================
+        // FIREBASE CONFIG
+        // =============================================================
         const firebaseConfig = {
             databaseURL: "https://english-meetings-f08e4-default-rtdb.firebaseio.com/"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // 2 TEST THEMES FOR TODAY AND TOMORROW (OR WEEKLY CYCLE)
-        const TEST_DAILY_THEMES = {
-            "day_1": {
-                dateKey: "2026-08-22", // Exemplo de hoje
-                title: "Financial Planning & Investments",
-                // Game-style visual identity for this scenario
-                theme: {
-                    icon: "💰",
-                    bannerGradient: "from-emerald-600 to-teal-700",
-                    roleA: { icon: "🧑‍💼", badge: "bg-emerald-100 text-emerald-800 border-emerald-300 text-emerald-700", border: "border-emerald-300", avatarBg: "bg-emerald-100" },
-                    roleB: { icon: "🙋", badge: "bg-amber-100 text-amber-800 border-amber-300 text-amber-700", border: "border-amber-300", avatarBg: "bg-amber-100" }
-                },
-                lobby: {
-                    text: "Today we explore how to manage money wisely, discuss assets, and make safe long-term decisions.",
-                    audioEmbed: '<iframe src="https://whyp.it/embeds/track/0riIJRm63We5?token=b1iPKwh9SamZ" width="100%" height="180" scrolling="no" frameborder="0" loading="lazy"></iframe>',
-                    vocabulary: [
-                        { word: "Asset", definition: "A useful or valuable thing, person, or quality." },
-                        { word: "Yield", definition: "The income return on an investment." }
-                    ],
-                    questions: ["What is your biggest financial goal this year?", "How do you usually save money?"]
-                },
-                mission: "You are at Northstar Brokers. Talk to your partner, understand their goals, and close the best investment deal together!",
-                personA: { roleTitle: "Financial Advisor", focus: "Suggest options & explain risk" },
-                personB: { roleTitle: "Client", focus: "Share goals & decide together" },
-                choicesSection: {
-                    boxTitle: "Investment Deal (Discuss & Register)",
-                    fields: [
-                        { key: "option", label: "Chosen Investment", type: "select", options: ["CDB / Treasury", "Stock Index Fund", "Real Estate Fund", "Mixed Portfolio"] },
-                        { key: "amount", label: "Amount ($)", type: "text", placeholder: "e.g. 50,000" }
-                    ]
-                },
-                optionsButton: {
-                    label: "📋 Investments", modalTitle: "Investment Options",
-                    // Each role sees their own set — at least 2 items per role, different from the other role's items
-                    optionsByRole: {
-                        A: [
-                            { icon: "🏦", title: "CDB / Treasury", description: "Fixed income, government/bank backed.", advantage: "Very safe", outcome: "~10% p.a.", consideration: "Low risk, low reward" },
-                            { icon: "📈", title: "Stock Index Fund", description: "Tracks the overall stock market.", advantage: "Higher growth potential", outcome: "~15-20% p.a. (variable)", consideration: "Moderate/high risk" }
-                        ],
-                        B: [
-                            { icon: "🛡️", title: "Conservative Profile", description: "Prioritizes safety over growth.", advantage: "Peace of mind", outcome: "Slow, steady gains", consideration: "May lose to inflation" },
-                            { icon: "🚀", title: "Growth Profile", description: "Prioritizes higher long-term returns.", advantage: "Bigger potential upside", outcome: "Faster wealth growth", consideration: "Accepts more ups and downs" }
-                        ]
-                    }
-                },
-                helpFriend: { buttonLabel: "💡 Help friend", modalTitle: "Help Checklist", steps: ["Ask about their goals clearly", "Propose one option that fits", "Confirm the amount together"] },
-                skills: ["Spoke clearly", "Active listening", "Negotiated well"]
+        // =============================================================
+        // GROQ API
+        // =============================================================
+        const GROQ_API_KEY = "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";
+        const GROQ_MODEL = "openai/gpt-oss-120b";
+
+        // =============================================================
+        // GAME STATE
+        // =============================================================
+        const G = {
+            player: { id: null, name: '' },
+            missions: {
+                a: { unlocked: true, completed: false, stars: 0, points: 0 },
+                b: { unlocked: false, completed: false, stars: 0, points: 0 },
+                c: { unlocked: false, completed: false, stars: 0, points: 0 }
             },
-            "day_2": {
-                dateKey: "2026-08-23", // Exemplo de amanhã
-                title: "Travel Planning & Adventure",
-                theme: {
-                    icon: "✈️",
-                    bannerGradient: "from-sky-600 to-blue-700",
-                    roleA: { icon: "🧳", badge: "bg-sky-100 text-sky-800 border-sky-300 text-sky-700", border: "border-sky-300", avatarBg: "bg-sky-100" },
-                    roleB: { icon: "🏖️", badge: "bg-orange-100 text-orange-800 border-orange-300 text-orange-700", border: "border-orange-300", avatarBg: "bg-orange-100" }
-                },
-                lobby: {
-                    text: "Today we plan an exciting trip abroad! Let's discuss itineraries, budgets, and cultural experiences.",
-                    audioEmbed: '<iframe src="https://whyp.it/embeds/track/UE5aNI22OTWw?token=5fmsDh9nq1k7" width="100%" height="180" scrolling="no" frameborder="0" loading="lazy"></iframe>',
-                    vocabulary: [
-                        { word: "Itinerary", definition: "A planned route or journey of a trip." },
-                        { word: "Accomodation", definition: "A place where traveler can sleep and stay." }
-                    ],
-                    questions: ["What is your dream travel destination?", "Do you prefer planned tours or exploring freely?"]
-                },
-                mission: "You are at Northstar Travel Agency. Plan a 7-day international trip with your friend, agreeing on destination and budget!",
-                personA: { roleTitle: "Travel Agent", focus: "Suggest destinations & costs" },
-                personB: { roleTitle: "Vacationer", focus: "Share preferences & set budget" },
-                choicesSection: {
-                    boxTitle: "Trip Plan (Discuss & Register)",
-                    fields: [
-                        { key: "destination", label: "Destination", type: "select", options: ["Washington DC", "Paris", "Tokyo", "Rio de Janeiro"] },
-                        { key: "budget", label: "Budget ($)", type: "text", placeholder: "e.g. 3,000" }
-                    ]
-                },
-                optionsButton: {
-                    label: "📋 Destinations", modalTitle: "Trip Options",
-                    optionsByRole: {
-                        A: [
-                            { icon: "🏛️", title: "Washington DC Package", description: "Museums & history, city tour included.", advantage: "Rich culture", outcome: "Great learning experience", consideration: "Busy season, higher prices" },
-                            { icon: "🥐", title: "Paris Package", description: "Classic sights, food & art tour.", advantage: "Iconic experience", outcome: "Unforgettable memories", consideration: "Higher daily costs" }
-                        ],
-                        B: [
-                            { icon: "🛋️", title: "Relaxed & Comfort", description: "Slow pace, comfortable hotels.", advantage: "Low stress", outcome: "Well-rested trip", consideration: "Costs more per day" },
-                            { icon: "🎒", title: "Adventure & Budget", description: "Fast pace, hostels, local transport.", advantage: "Cheaper & exciting", outcome: "More stops, more stories", consideration: "More physically tiring" }
-                        ]
-                    }
-                },
-                helpFriend: { buttonLabel: "💡 Help friend", modalTitle: "Help Checklist", steps: ["Discuss the budget first", "Select the top spots together", "Agree on a travel style"] },
-                skills: ["Exciting vocabulary", "Good suggestions", "Friendly tone"]
-            }
+            currentMission: null, // 'a' | 'b' | 'c'
+            activitiesData: { a: null, b: null, c: null },
+            totalPoints: 0,
+            answeredCorrectly: 0,
+            totalQuestions: 0
         };
 
-        let currentUser = null;
-        let currentRoom = null;
-        let currentScenario = null;
-        let isInitializedFields = false;
-        let myRoleKey = null; // 'A' or 'B'
+        // =============================================================
+        // DOM REFS
+        // =============================================================
+        const $ = id => document.getElementById(id);
+        const $$ = sel => document.querySelectorAll(sel);
 
-        function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = String(str ?? '');
-            return div.innerHTML;
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('role') === 'teacher') {
-                showScreen('screen-teacher');
-                initTeacherPanel();
-            } else {
-                showScreen('screen-setup');
-            }
-        });
-
+        // =============================================================
+        // SCREEN MANAGEMENT
+        // =============================================================
         function showScreen(id) {
-            document.querySelectorAll('.max-w-4xl > div').forEach(div => div.classList.add('hidden-screen'));
-            document.getElementById(id).classList.remove('hidden-screen');
+            document.querySelectorAll('[id^="screen-"]').forEach(el => el.classList.add('hidden-screen'));
+            const el = $(id);
+            if (el) el.classList.remove('hidden-screen');
         }
 
         // =============================================================
-        // SETUP & DAILY THEME RESOLUTION
+        // LANDING
         // =============================================================
-        document.getElementById('form-setup').addEventListener('submit', (e) => {
+        $('form-setup').addEventListener('submit', (e) => {
             e.preventDefault();
-            const name = document.getElementById('input-name').value.trim();
+            const name = $('input-name').value.trim();
             if (!name) return;
-            currentUser = {
-                id: 'user_' + Math.random().toString(36).substr(2, 9),
-                name: name,
-                status: 'lobby',
-                room: null,
-                joinedAt: Date.now(),
-                answers: {}
-            };
-            db.ref(`students/${currentUser.id}`).set(currentUser);
-            showScreen('screen-lobby');
-            loadDailyThemeForUser();
-            listenForRoomAssignment();
+            G.player.id = 'user_' + Math.random().toString(36).substr(2, 9);
+            G.player.name = name;
+            db.ref(`students/${G.player.id}`).set({ id: G.player.id, name });
+            loadGameState();
+            showScreen('screen-dashboard');
+            renderDashboard();
         });
 
-        function loadDailyThemeForUser() {
-            // Pega a data atual no formato YYYY-MM-DD do navegador ou simula
-            const todayStr = new Date().toISOString().split('T')[0];
+        // =============================================================
+        // LOAD / SAVE GAME STATE
+        // =============================================================
+        function loadGameState() {
+            db.ref('activities').on('value', (snap) => {
+                const data = snap.val() || {};
+                G.activitiesData = data;
+                if (G.currentMission) renderMission(G.currentMission);
+                renderDashboard();
+            });
 
-            db.ref('dailyThemes').once('value').then((snap) => {
-                const themes = snap.val() || TEST_DAILY_THEMES;
-                // Procura o tema correspondente à data de hoje, senão pega o primeiro disponível
-                let selectedTheme = null;
-                Object.values(themes).forEach(t => {
-                    if (t.dateKey === todayStr) selectedTheme = t;
+            // Load player progress
+            if (G.player.id) {
+                db.ref(`progress/${G.player.id}`).on('value', (snap) => {
+                    const p = snap.val() || {};
+                    if (p.missions) {
+                        Object.keys(p.missions).forEach(key => {
+                            if (G.missions[key]) {
+                                G.missions[key].completed = p.missions[key].completed || false;
+                                G.missions[key].stars = p.missions[key].stars || 0;
+                                G.missions[key].points = p.missions[key].points || 0;
+                            }
+                        });
+                        G.totalPoints = Object.values(p.missions).reduce((sum, m) => sum + (m.points || 0), 0);
+                        // Unlock logic
+                        if (G.missions.a.completed) G.missions.b.unlocked = true;
+                        if (G.missions.b.completed) G.missions.c.unlocked = true;
+                    }
+                    renderDashboard();
+                    if (G.currentMission) renderMission(G.currentMission);
                 });
-                if (!selectedTheme) {
-                    // Fallback para o primeiro tema se a data bater exata
-                    selectedTheme = Object.values(themes)[0] || TEST_DAILY_THEMES.day_1;
+            }
+        }
+
+        function saveProgress() {
+            if (!G.player.id) return;
+            const data = {
+                missions: {
+                    a: { completed: G.missions.a.completed, stars: G.missions.a.stars, points: G.missions.a.points },
+                    b: { completed: G.missions.b.completed, stars: G.missions.b.stars, points: G.missions.b.points },
+                    c: { completed: G.missions.c.completed, stars: G.missions.c.stars, points: G.missions.c.points }
                 }
-
-                currentScenario = selectedTheme;
-                renderLobbyContent(selectedTheme, todayStr);
-            });
+            };
+            db.ref(`progress/${G.player.id}`).set(data);
         }
 
-        function renderLobbyContent(theme, dateStr) {
-            document.getElementById('lobby-date-badge').innerText = `Today's Topic (${dateStr})`;
-            document.getElementById('lobby-theme-title').innerText = theme.title;
+        // =============================================================
+        // DASHBOARD
+        // =============================================================
+        function renderDashboard() {
+            $('dash-name').textContent = G.player.name || 'Agent';
+            $('dash-points').textContent = G.totalPoints;
 
-            const lobbyData = theme.lobby || {};
-            document.getElementById('lobby-text-card').innerHTML = `<p>${escapeHtml(lobbyData.text || '')}</p>`;
+            const total = Object.keys(G.missions).length;
+            const done = Object.values(G.missions).filter(m => m.completed).length;
+            $('dash-progress-text').textContent = `${done} / ${total} missions`;
+            $('dash-progress-bar').style.width = `${(done/total)*100}%`;
 
-            const vocabList = document.getElementById('lobby-vocab-list');
-            vocabList.innerHTML = (lobbyData.vocabulary || []).map(v => `
-                <div class="p-3 bg-slate-50 border rounded-xl text-xs space-y-1">
-                    <strong class="text-indigo-600 text-sm">${escapeHtml(v.word)}</strong>
-                    <p class="text-slate-600">${escapeHtml(v.definition)}</p>
-                </div>
-            `).join('');
+            // Cards
+            ['a', 'b', 'c'].forEach(key => {
+                const m = G.missions[key];
+                const card = $(`card-${key}`);
+                const statusEl = $(`card-${key}-status`);
+                const scoreEl = $(`card-${key}-score`);
+                const starsEl = $(`card-${key}-stars`);
+                const btn = card.querySelector('button');
 
-            const qList = document.getElementById('lobby-questions-list');
-            qList.innerHTML = (lobbyData.questions || []).map(q => `<li>${escapeHtml(q)}</li>`).join('');
-        }
+                // Stars
+                const filled = '★'.repeat(m.stars) + '☆'.repeat(3 - m.stars);
+                starsEl.textContent = filled;
 
-        function listenForRoomAssignment() {
-            db.ref(`students/${currentUser.id}`).on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data && data.room) {
-                    currentRoom = data.room;
-                    showScreen('screen-activity');
-                    initActivityScreen();
+                if (m.completed) {
+                    card.className = 'mission-card glass rounded-2xl p-5 completed';
+                    statusEl.textContent = '✅ Completed';
+                    scoreEl.textContent = `${m.points} pts`;
+                    btn.textContent = '🔄 Replay';
+                    btn.disabled = false;
+                    btn.className =
+                    'mt-3 w-full py-2 bg-emerald-600/30 hover:bg-emerald-600/50 rounded-xl text-sm font-medium text-emerald-300 transition border border-emerald-500/20';
+                    btn.onclick = () => { G.currentMission = key;
+                        launchMission(key); };
+                } else if (m.unlocked) {
+                    card.className = 'mission-card glass rounded-2xl p-5 available';
+                    statusEl.textContent = '🔓 Available';
+                    scoreEl.textContent = '0 pts';
+                    btn.textContent = '▶ Launch';
+                    btn.disabled = false;
+                    btn.className =
+                    'mt-3 w-full py-2 bg-indigo-600/30 hover:bg-indigo-600/50 rounded-xl text-sm font-medium text-indigo-300 transition border border-indigo-500/20';
+                    btn.onclick = () => { G.currentMission = key;
+                        launchMission(key); };
+                } else {
+                    card.className = 'mission-card glass rounded-2xl p-5 locked';
+                    statusEl.textContent = '🔒 Locked';
+                    scoreEl.textContent = '—';
+                    btn.textContent = '🔒 Locked';
+                    btn.disabled = true;
+                    btn.className =
+                    'mt-3 w-full py-2 bg-white/5 rounded-xl text-sm font-medium text-slate-600 cursor-not-allowed border border-white/5';
+                    btn.onclick = null;
                 }
             });
         }
 
         // =============================================================
-        // SCREEN 3: ACTIVITY (GAME STYLE)
+        // LAUNCH MISSION
         // =============================================================
-        function initActivityScreen() {
-            if (!currentScenario) {
-                currentScenario = TEST_DAILY_THEMES.day_1;
-            }
-
-            renderScenarioStaticParts(currentScenario);
-            if (!isInitializedFields) {
-                renderChoicesFieldsContainers(currentScenario);
-                isInitializedFields = true;
-            }
-            wireOptionsAndHelpButtons(currentScenario);
-
-            db.ref('timer').on('value', (snapshot) => {
-                const timerData = snapshot.val() || { seconds: 1800, running: false };
-                updateTimerDisplay(timerData.seconds);
-            });
-
-            db.ref('students').on('value', (snapshot) => {
-                const allStudents = snapshot.val() || {};
-                const roomPlayers = Object.values(allStudents)
-                    .filter(s => s.room === currentRoom)
-                    .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
-
-                renderRoomPlayers(roomPlayers, currentScenario);
-                updatePartnerRealtimeView(roomPlayers);
-            });
-
-            document.getElementById('btn-to-wrapup').onclick = () => {
-                buildWrapupSummary(currentScenario);
-                renderSkillsSection(currentScenario);
-                showScreen('screen-wrapup');
-            };
-
-            document.getElementById('btn-back-to-activity').onclick = () => {
-                showScreen('screen-activity');
-            };
+        function launchMission(key) {
+            G.currentMission = key;
+            showScreen('screen-mission');
+            renderMission(key);
         }
 
-        function renderScenarioStaticParts(scenario) {
-            const theme = scenario.theme || {};
-
-            // Banner
-            const banner = document.getElementById('activity-banner');
-            banner.className = 'p-5 md:p-6 text-white bg-gradient-to-br ' + (theme.bannerGradient || 'from-indigo-600 to-violet-700');
-            document.getElementById('scenario-icon').innerText = theme.icon || '🎮';
-            document.getElementById('scenario-title-badge').innerText = scenario.title || 'Scenario';
-            document.getElementById('mission-display').innerText = scenario.mission;
-
-            // Audio moved from the lobby into the main screen (collapsed by default)
-            document.getElementById('activity-audio-container').innerHTML = scenario.lobby?.audioEmbed || '';
-
-            // Role A card styling
-            const roleA = theme.roleA || {};
-            document.getElementById('person-a-avatar').innerText = roleA.icon || '🧑';
-            document.getElementById('person-a-avatar').className = 'w-12 h-12 mx-auto rounded-full flex items-center justify-center text-2xl ' + (roleA.avatarBg || 'bg-slate-100');
-            document.getElementById('info-person-a').className = 'role-card rounded-2xl border-2 p-4 text-center space-y-1.5 ' + (roleA.border || 'border-slate-200');
-            document.getElementById('person-a-role-title').className = 'inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ' + (roleA.badge || 'bg-slate-100 text-slate-700');
-            document.getElementById('person-a-role-title').innerText = scenario.personA?.roleTitle || 'Role A';
-            document.getElementById('person-a-focus').innerText = scenario.personA?.focus || '';
-
-            // Role B card styling
-            const roleB = theme.roleB || {};
-            document.getElementById('person-b-avatar').innerText = roleB.icon || '🧑';
-            document.getElementById('person-b-avatar').className = 'w-12 h-12 mx-auto rounded-full flex items-center justify-center text-2xl ' + (roleB.avatarBg || 'bg-slate-100');
-            document.getElementById('info-person-b').className = 'role-card rounded-2xl border-2 p-4 text-center space-y-1.5 ' + (roleB.border || 'border-slate-200');
-            document.getElementById('person-b-role-title').className = 'inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ' + (roleB.badge || 'bg-slate-100 text-slate-700');
-            document.getElementById('person-b-role-title').innerText = scenario.personB?.roleTitle || 'Role B';
-            document.getElementById('person-b-focus').innerText = scenario.personB?.focus || '';
-
-            document.getElementById('choices-box-title').innerText = scenario.choicesSection?.boxTitle || 'Choices';
+        function goToDashboard() {
+            G.currentMission = null;
+            showScreen('screen-dashboard');
+            renderDashboard();
         }
 
-        function renderChoicesFieldsContainers(scenario) {
-            const fields = scenario.choicesSection?.fields || [];
-            const myContainer = document.getElementById('my-fields-container');
-            const partnerContainer = document.getElementById('partner-fields-container');
+        // =============================================================
+        // RENDER MISSION
+        // =============================================================
+        function renderMission(key) {
+            const data = G.activitiesData[key];
+            if (!data) {
+                $('mission-title').textContent = 'Mission ' + key.toUpperCase();
+                $('mission-subtitle').textContent = 'No content loaded yet.';
+                $('mission-questions').innerHTML =
+                    '<p class="text-slate-400 text-sm">⚠️ Teacher hasn\'t configured this mission yet.</p>';
+                return;
+            }
 
-            myContainer.innerHTML = fields.map((f, i) => {
-                if (f.type === 'select') {
-                    const opts = (f.options || []).map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
-                    return `<div>
-                        <label class="block text-xs font-medium text-slate-600 mb-1">${escapeHtml(f.label || f.placeholder || '')}</label>
-                        <select id="my-choice-field-${i}" onchange="syncMyAnswer(${i})" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                            <option value="">Choose...</option>
-                            ${opts}
-                        </select>
-                    </div>`;
+            const names = { a: 'Earnings Call', b: 'Tone & Diplomacy', c: 'Boardroom Debate' };
+            const subs = { a: 'Fill in the missing numbers', b: 'Choose the best interpretation',
+            c: 'Mark arguments & decide winner' };
+            $('mission-title').textContent = `Mission ${key.toUpperCase()} · ${names[key]}`;
+            $('mission-subtitle').textContent = subs[key];
+
+            // Score
+            const m = G.missions[key];
+            $('mission-score').textContent = m.points || 0;
+            const filled = '★'.repeat(m.stars) + '☆'.repeat(3 - m.stars);
+            $('mission-stars-display').textContent = filled;
+
+            // Steps
+            $('step-dot-1').className = 'step-dot active';
+            $('step-dot-2').className = 'step-dot';
+            $('step-dot-3').className = 'step-dot';
+            $('step-line-1').className = 'h-0.5 w-8 bg-white/10';
+            $('step-line-2').className = 'h-0.5 w-8 bg-white/10';
+            $('step-label').textContent = 'Step 1: Listen';
+
+            // Audio
+            buildAudioPlayer(data, 'audio-player-container', 'mission-play-btn');
+
+            // Questions
+            buildQuestions(key, data);
+
+            // Reset
+            $('mission-reset-btn').onclick = () => {
+                renderMission(key);
+            };
+
+            // Check
+            $('mission-check-btn').onclick = () => {
+                checkMission(key);
+            };
+
+            // Feedback
+            $('mission-feedback').textContent = '';
+            $('mission-feedback').className = 'mt-4 text-sm font-medium';
+        }
+
+        // =============================================================
+        // AUDIO PLAYER
+        // =============================================================
+        function buildAudioPlayer(data, containerId, playBtnId) {
+            const container = $(containerId);
+            const playBtn = $(playBtnId);
+            container.innerHTML = '';
+
+            const mp3Url = data.audioFile || '';
+            const iframeUrl = data.audioUrl || '';
+
+            if (mp3Url) {
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.preload = 'metadata';
+                audio.style.width = '100%';
+                audio.style.borderRadius = '12px';
+                audio.style.background = 'rgba(255,255,255,0.04)';
+                const source = document.createElement('source');
+                source.src = mp3Url;
+                source.type = 'audio/mpeg';
+                audio.appendChild(source);
+                container.appendChild(audio);
+
+                // Wave visual
+                const wave = document.createElement('div');
+                wave.className = 'audio-wave mt-2';
+                wave.innerHTML = Array(16).fill(0).map(() => '<div class="bar"></div>').join('');
+                container.appendChild(wave);
+
+                let isPlaying = false;
+                audio.addEventListener('play', () => { isPlaying = true;
+                    wave.classList.add('playing'); });
+                audio.addEventListener('pause', () => { isPlaying = false;
+                    wave.classList.remove('playing'); });
+                audio.addEventListener('ended', () => { isPlaying = false;
+                    wave.classList.remove('playing'); });
+
+                playBtn.onclick = () => {
+                    if (audio.paused) {
+                        audio.play().catch(() => {});
+                    } else {
+                        audio.pause();
+                    }
+                };
+                playBtn.innerHTML = '<span>▶</span> Play';
+
+                audio.addEventListener('play', () => { playBtn.innerHTML = '<span>⏸</span> Pause'; });
+                audio.addEventListener('pause', () => { playBtn.innerHTML = '<span>▶</span> Play'; });
+                audio.addEventListener('ended', () => { playBtn.innerHTML = '<span>▶</span> Play'; });
+
+                $('audio-status').textContent = '🎵 MP3 loaded';
+
+            } else if (iframeUrl) {
+                const iframe = document.createElement('iframe');
+                iframe.src = iframeUrl;
+                iframe.allow = 'autoplay; encrypted-media';
+                iframe.style.width = '100%';
+                iframe.style.height = '160px';
+                iframe.style.border = 'none';
+                iframe.style.borderRadius = '12px';
+                iframe.style.background = 'rgba(255,255,255,0.04)';
+                container.appendChild(iframe);
+                playBtn.onclick = () => {
+                    const ifr = container.querySelector('iframe');
+                    if (ifr) ifr.src = ifr.src;
+                };
+                playBtn.innerHTML = '<span>🔄</span> Reload';
+                $('audio-status').textContent = '🎵 iframe fallback';
+            } else {
+                container.innerHTML = '<p class="text-slate-500 text-sm p-3">No audio configured.</p>';
+                playBtn.onclick = () => {};
+                playBtn.disabled = true;
+                playBtn.className = 'btn-primary px-6 py-3 text-base flex items-center gap-2 opacity-40 cursor-not-allowed';
+                $('audio-status').textContent = '⛔ No audio';
+            }
+        }
+
+        // =============================================================
+        // BUILD QUESTIONS
+        // =============================================================
+        function buildQuestions(key, data) {
+            const container = $('mission-questions');
+            container.innerHTML = '';
+            let count = 0;
+
+            if (key === 'a' && data.questions && Array.isArray(data.questions)) {
+                data.questions.forEach((q, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'q-card';
+                    div.innerHTML = `
+                        <label class="block text-sm font-medium text-slate-200">${q.label}</label>
+                        <input type="text" id="q-a-${idx}" placeholder="Type your answer..." class="input-game mt-1.5">
+                        <span id="fb-a-${idx}" class="text-xs font-medium ml-1"></span>
+                    `;
+                    container.appendChild(div);
+                    count++;
+                });
+            } else if (key === 'b' && data.questions && Array.isArray(data.questions)) {
+                data.questions.forEach((q, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'q-card';
+                    let optsHtml = q.options.map((opt, oi) => `
+                        <label class="option-label">
+                            <input type="radio" name="q-b-${idx}" value="${oi}">
+                            <span>${opt}</span>
+                        </label>
+                    `).join('');
+                    div.innerHTML = `
+                        <p class="font-medium text-slate-200 text-sm mb-2">${q.label}</p>
+                        <div class="space-y-1.5">${optsHtml}</div>
+                        <span id="fb-b-${idx}" class="text-xs font-medium mt-1.5 block"></span>
+                    `;
+                    container.appendChild(div);
+                    count++;
+                });
+            } else if (key === 'c' && data.arguments && Array.isArray(data.arguments)) {
+                // Table for arguments
+                const tableDiv = document.createElement('div');
+                tableDiv.className = 'overflow-x-auto';
+                let html = `
+                    <table class="w-full text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-white/5">
+                                <th class="p-2 text-left text-slate-300 font-medium">Argument</th>
+                                <th class="p-2 text-center text-slate-300 font-medium w-24">Maria</th>
+                                <th class="p-2 text-center text-slate-300 font-medium w-24">James</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                data.arguments.forEach((arg, idx) => {
+                    html += `
+                        <tr class="border-t border-white/5">
+                            <td class="p-2 text-sm text-slate-200">${arg.text}</td>
+                            <td class="p-2 text-center"><input type="checkbox" class="c-check" data-arg="${idx}" data-person="maria" class="w-4 h-4 accent-indigo-500"></td>
+                            <td class="p-2 text-center"><input type="checkbox" class="c-check" data-arg="${idx}" data-person="james" class="w-4 h-4 accent-indigo-500"></td>
+                        </tr>
+                    `;
+                });
+                html += `</tbody></table>`;
+                tableDiv.innerHTML = html;
+                container.appendChild(tableDiv);
+
+                // Final question
+                if (data.finalQuestion) {
+                    const div = document.createElement('div');
+                    div.className = 'q-card mt-4';
+                    div.innerHTML = `
+                        <p class="font-medium text-slate-200 text-sm">${data.finalQuestion.label}</p>
+                        <input type="text" id="q-c-final" placeholder="Your opinion..." class="input-game mt-1.5">
+                        <span id="fb-c-final" class="text-xs font-medium ml-1"></span>
+                    `;
+                    container.appendChild(div);
+                    count++;
                 }
-                return `<div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">${escapeHtml(f.label || f.placeholder || '')}</label>
-                    <input type="text" id="my-choice-field-${i}" oninput="syncMyAnswer(${i})" placeholder="${escapeHtml(f.placeholder || '')}" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                </div>`;
-            }).join('');
-
-            partnerContainer.innerHTML = fields.map((f, i) =>
-                `<div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">${escapeHtml(f.label || f.placeholder || '')}</label>
-                    <input type="text" id="partner-choice-field-${i}" disabled placeholder="Waiting for partner..." class="w-full p-2.5 bg-slate-200/60 border border-slate-300 rounded-lg text-sm text-slate-700 font-medium cursor-not-allowed">
-                </div>`
-            ).join('');
-
-            if (currentUser && currentUser.name) {
-                document.getElementById('my-answers-label').innerText = `✏️ You (${currentUser.name})`;
+                // Count checkboxes as questions
+                count += data.arguments.length;
+            } else {
+                container.innerHTML = '<p class="text-slate-500 text-sm">No questions loaded for this mission.</p>';
+                return;
             }
+
+            $('question-counter').textContent = `${count} questions`;
+            G.totalQuestions = count;
         }
 
-        function syncMyAnswer(index) {
-            const inputVal = document.getElementById(`my-choice-field-${index}`).value;
-            db.ref(`students/${currentUser.id}/answers/field_${index}`).set(inputVal);
-        }
+        // =============================================================
+        // CHECK MISSION
+        // =============================================================
+        function checkMission(key) {
+            const data = G.activitiesData[key];
+            if (!data) return;
 
-        function updatePartnerRealtimeView(roomPlayers) {
-            const partner = roomPlayers.find(p => p && p.id !== currentUser.id);
-            if (partner && partner.answers) {
-                Object.keys(partner.answers).forEach(key => {
-                    const idx = key.replace('field_', '');
-                    const partnerInput = document.getElementById(`partner-choice-field-${idx}`);
-                    if (partnerInput && partnerInput.value !== partner.answers[key]) {
-                        partnerInput.value = partner.answers[key] || '';
+            let correct = 0;
+            let total = 0;
+
+            if (key === 'a' && data.questions) {
+                data.questions.forEach((q, idx) => {
+                    const input = $(`q-a-${idx}`);
+                    const fb = $(`fb-a-${idx}`);
+                    if (!input) return;
+                    const userAns = input.value.trim().toLowerCase();
+                    const correctAns = String(q.correctAnswer).toLowerCase();
+                    total++;
+                    const div = input.closest('.q-card');
+                    if (userAns === correctAns) {
+                        fb.textContent = '✅';
+                        fb.className = 'text-emerald-400 text-xs font-medium ml-1';
+                        div.className = 'q-card correct';
+                        correct++;
+                    } else {
+                        fb.textContent = `❌ ${q.correctAnswer}`;
+                        fb.className = 'text-rose-400 text-xs font-medium ml-1';
+                        div.className = 'q-card wrong';
                     }
                 });
-            }
-        }
-
-        function wireOptionsAndHelpButtons(scenario) {
-            const optionsBtn = document.getElementById('btn-options');
-            const optCfg = scenario.optionsButton || {};
-            optionsBtn.innerText = optCfg.label || '📋 Options';
-            optionsBtn.onclick = () => openOptionsModal(optCfg);
-
-            const helpBtn = document.getElementById('btn-help-friend');
-            const helpCfg = scenario.helpFriend || {};
-            helpBtn.innerText = helpCfg.buttonLabel || '💡 Help friend';
-            helpBtn.onclick = () => {
-                const stepsHtml = `<ul class="list-disc list-inside space-y-2">${
-                    (helpCfg.steps || []).map((s, i) => `<li><strong>Step ${i + 1}:</strong> ${escapeHtml(s)}</li>`).join('')
-                }</ul>`;
-                openModal(helpCfg.modalTitle || 'Help Checklist', stepsHtml);
-            };
-        }
-
-        function openOptionsModal(optCfg) {
-            const roleKey = myRoleKey || 'A';
-            const items = (optCfg.optionsByRole && optCfg.optionsByRole[roleKey]) || [];
-            const body = `
-                <div class="space-y-3">
-                    ${items.map(opt => `
-                        <div class="opt-card border-2 rounded-2xl p-3.5 bg-slate-50 space-y-1.5">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xl">${escapeHtml(opt.icon || '⭐')}</span>
-                                <strong class="text-indigo-700 text-sm">${escapeHtml(opt.title)}</strong>
-                            </div>
-                            <p class="text-xs text-slate-600">${escapeHtml(opt.description || '')}</p>
-                            <div class="flex flex-wrap gap-1.5 pt-1">
-                                <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-semibold">👍 ${escapeHtml(opt.advantage || '')}</span>
-                                <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-semibold">📊 ${escapeHtml(opt.outcome || '')}</span>
-                                ${opt.consideration ? `<span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-semibold">⚠️ ${escapeHtml(opt.consideration)}</span>` : ''}
-                            </div>
-                        </div>
-                    `).join('') || '<p class="text-sm text-slate-400">No options available.</p>'}
-                </div>
-            `;
-            openModal(optCfg.modalTitle || 'Options', body);
-        }
-
-        function renderRoomPlayers(players, scenario) {
-            const personA = players[0] || null;
-            const personB = players[1] || null;
-
-            document.getElementById('person-a-name').innerHTML = personA ? escapeHtml(personA.name) + (personA.id === currentUser?.id ? ' (You)' : '') : 'Waiting...';
-            document.getElementById('person-b-name').innerHTML = personB ? escapeHtml(personB.name) + (personB.id === currentUser?.id ? ' (You)' : '') : 'Waiting for partner...';
-
-            const partner = [personA, personB].find(p => p && p.id !== currentUser?.id);
-            document.getElementById('choices-partner-name').innerText = partner ? partner.name : '—';
-            document.getElementById('friend-name-stars').innerText = partner ? partner.name : 'your partner';
-
-            const isA = personA && currentUser && personA.id === currentUser.id;
-            myRoleKey = isA ? 'A' : 'B';
-
-            // Highlight my own card
-            document.getElementById('info-person-a').classList.toggle('role-you', isA);
-            document.getElementById('info-person-b').classList.toggle('role-you', !isA && !!(personB && currentUser && personB.id === currentUser.id));
-        }
-
-        function updateTimerDisplay(seconds) {
-            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
-            const s = String(seconds % 60).padStart(2, '0');
-            document.getElementById('timer-display').innerText = `${m}:${s}`;
-        }
-
-        function buildWrapupSummary(scenario) {
-            const fields = scenario.choicesSection?.fields || [];
-            const rows = fields.map((f, i) => {
-                const elMy = document.getElementById(`my-choice-field-${i}`);
-                const elPartner = document.getElementById(`partner-choice-field-${i}`);
-                return `<p><strong>${escapeHtml(f.label || f.placeholder)}:</strong> You: ${escapeHtml(elMy?.value || 'N/A')} | Partner: ${escapeHtml(elPartner?.value || 'N/A')}</p>`;
-            }).join('');
-            document.getElementById('created-summary').innerHTML = rows;
-        }
-
-        function renderSkillsSection(scenario) {
-            const skills = scenario.skills || ['Spoke clearly', 'Active listening'];
-            const container = document.getElementById('skills-rating-container');
-            container.innerHTML = skills.map((label, idx) => `
-                <div class="flex items-center justify-between p-3 bg-slate-50 border rounded-xl">
-                    <span class="text-sm font-medium text-slate-700">${escapeHtml(label)}</span>
-                    <div class="star-group flex space-x-1 text-2xl cursor-pointer" data-skill="${idx}">
-                        ${[1,2,3,4,5].map(v => `<span data-val="${v}" class="star opacity-30 transition">⭐</span>`).join('')}
-                    </div>
-                </div>
-            `).join('');
-
-            container.querySelectorAll('.star-group').forEach(group => {
-                const stars = group.querySelectorAll('.star');
-                stars.forEach(star => {
-                    star.addEventListener('click', (e) => {
-                        const selectedVal = Number(e.target.dataset.val);
-                        stars.forEach((s, idx2) => {
-                            if (idx2 < selectedVal) s.classList.add('star-active');
-                            else s.classList.remove('star-active');
+            } else if (key === 'b' && data.questions) {
+                data.questions.forEach((q, idx) => {
+                    const radios = document.querySelectorAll(`input[name="q-b-${idx}"]`);
+                    let selected = null;
+                    radios.forEach(r => { if (r.checked) selected = parseInt(r.value); });
+                    const fb = $(`fb-b-${idx}`);
+                    total++;
+                    const div = radios[0]?.closest('.q-card');
+                    if (selected === q.correctIndex) {
+                        fb.textContent = '✅ Correct';
+                        fb.className = 'text-emerald-400 text-xs font-medium mt-1.5 block';
+                        if (div) div.className = 'q-card correct';
+                        correct++;
+                        // Highlight correct option
+                        radios.forEach((r, oi) => {
+                            const label = r.closest('.option-label');
+                            if (oi === q.correctIndex) label.className = 'option-label correct-answer';
                         });
-                    });
+                    } else {
+                        fb.textContent = `❌ Correct: ${q.options[q.correctIndex]}`;
+                        fb.className = 'text-rose-400 text-xs font-medium mt-1.5 block';
+                        if (div) div.className = 'q-card wrong';
+                        radios.forEach((r, oi) => {
+                            const label = r.closest('.option-label');
+                            if (oi === q.correctIndex) label.className = 'option-label correct-answer';
+                            if (r.checked && oi !== q.correctIndex) label.className = 'option-label wrong-answer';
+                        });
+                    }
                 });
-            });
+            } else if (key === 'c' && data.arguments) {
+                const checks = document.querySelectorAll('.c-check');
+                let checkedCount = 0;
+                let correctChecks = 0;
+                data.arguments.forEach((arg, idx) => {
+                    const maria = document.querySelector(`.c-check[data-arg="${idx}"][data-person="maria"]`);
+                    const james = document.querySelector(`.c-check[data-arg="${idx}"][data-person="james"]`);
+                    if (maria) {
+                        checkedCount++;
+                        const mariaCorrect = arg.correctPerson === 'maria';
+                        if (maria.checked === mariaCorrect) correctChecks++;
+                        // Visual feedback
+                        const row = maria.closest('tr');
+                        if (maria.checked === mariaCorrect) {
+                            row.style.background = 'rgba(52,211,153,0.05)';
+                        } else {
+                            row.style.background = 'rgba(239,68,68,0.05)';
+                        }
+                    }
+                    if (james) {
+                        checkedCount++;
+                        const jamesCorrect = arg.correctPerson === 'james';
+                        if (james.checked === jamesCorrect) correctChecks++;
+                    }
+                });
+                correct = correctChecks;
+                total = checkedCount;
+
+                // Final question (opinion) - just check if answered
+                const finalInput = $(`q-c-final`);
+                if (finalInput && finalInput.value.trim()) {
+                    $(`fb-c-final`).textContent = '✅ Opinion recorded';
+                    $(`fb-c-final`).className = 'text-emerald-400 text-xs font-medium ml-1';
+                } else if (finalInput) {
+                    $(`fb-c-final`).textContent = '💬 Optional opinion';
+                    $(`fb-c-final`).className = 'text-slate-400 text-xs font-medium ml-1';
+                }
+            }
+
+            // Calculate points and stars
+            const totalQ = total || 1;
+            const pct = Math.round((correct / totalQ) * 100);
+            let stars = 0;
+            if (pct >= 90) stars = 3;
+            else if (pct >= 70) stars = 2;
+            else if (pct >= 50) stars = 1;
+            const points = Math.round((pct / 100) * 100);
+
+            // Update state
+            const m = G.missions[key];
+            m.completed = true;
+            m.stars = stars;
+            m.points = points;
+            G.totalPoints = Object.values(G.missions).reduce((sum, x) => sum + (x.points || 0), 0);
+
+            // Unlock next
+            if (key === 'a' && m.completed) G.missions.b.unlocked = true;
+            if (key === 'b' && m.completed) G.missions.c.unlocked = true;
+
+            saveProgress();
+            renderDashboard();
+
+            // Show feedback
+            const fb = $('mission-feedback');
+            fb.textContent = `🎯 ${correct}/${totalQ} correct · ${pct}% · ⭐ ${stars} stars · +${points} points`;
+            fb.className = 'mt-4 text-sm font-medium text-emerald-400';
+
+            // Show modal
+            showResultsModal(key, stars, points, pct);
         }
+
+        // =============================================================
+        // RESULTS MODAL
+        // =============================================================
+        function showResultsModal(key, stars, points, pct) {
+            const starsStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+            $('modal-stars').textContent = starsStr;
+            $('modal-title').textContent = stars >= 3 ? '🏆 Perfect! Amazing work!' :
+                stars >= 2 ? '🌟 Great job, agent!' :
+                '✅ Mission complete!';
+            $('modal-subtitle').textContent = `Mission ${key.toUpperCase()} · ${pct}% accuracy`;
+            $('modal-points').textContent = `${points} pts`;
+            $('modal-accuracy').textContent = `${pct}%`;
+
+            // Next button
+            const nextBtn = $('modal-next-btn');
+            if (key === 'a' && !G.missions.b.completed) {
+                nextBtn.textContent = '→ Mission 2: Tone';
+                nextBtn.onclick = () => { closeModal();
+                    G.currentMission = 'b';
+                    launchMission('b'); };
+            } else if (key === 'b' && !G.missions.c.completed) {
+                nextBtn.textContent = '→ Mission 3: Boardroom';
+                nextBtn.onclick = () => { closeModal();
+                    G.currentMission = 'c';
+                    launchMission('c'); };
+            } else if (key === 'c') {
+                nextBtn.textContent = '🏁 All Done!';
+                nextBtn.onclick = () => { closeModal();
+                    goToDashboard(); };
+            } else {
+                nextBtn.textContent = '📊 Dashboard';
+                nextBtn.onclick = () => { closeModal();
+                    goToDashboard(); };
+            }
+
+            $('modal-container').classList.remove('hidden-screen');
+        }
+
+        function closeModal() {
+            $('modal-container').classList.add('hidden-screen');
+        }
+        // Close on backdrop click
+        $('modal-container').addEventListener('click', (e) => {
+            if (e.target === $('modal-container')) closeModal();
+        });
 
         // =============================================================
         // TEACHER PANEL
         // =============================================================
-        function initTeacherPanel() {
-            seedDefaultRooms();
-            let roomsList = {}, studentsData = {};
-
-            db.ref('roomsList').on('value', snap => { roomsList = snap.val() || {}; renderTeacherStudents(studentsData, roomsList); });
-            db.ref('students').on('value', snap => { studentsData = snap.val() || {}; renderTeacherStudents(studentsData, roomsList); });
-
-            document.getElementById('btn-add-room').addEventListener('click', addRoom);
+        function showTeacherPanel() {
+            showScreen('screen-teacher');
+            initTeacherTabs();
         }
 
-        function seedDailyThemes() {
-            db.ref('dailyThemes').set(TEST_DAILY_THEMES).then(() => {
-                document.getElementById('seed-status').innerText = "✅ Test Themes Published Successfully!";
-            });
-        }
+        let teacherTabsInited = false;
 
-        function seedDefaultRooms() {
-            db.ref('roomsList').once('value').then(snap => {
-                if (snap.val()) return;
-                const defaults = {};
-                for (let i = 1; i <= 5; i++) defaults['room' + i] = 'Room ' + i;
-                db.ref('roomsList').set(defaults);
-                db.ref('roomsMeta/nextIndex').set(6);
-            });
-        }
-
-        function addRoom() {
-            db.ref('roomsMeta/nextIndex').once('value').then(snap => {
-                const n = snap.val() || 6;
-                db.ref('roomsList/room' + n).set('Room ' + n);
-                db.ref('roomsMeta/nextIndex').set(n + 1);
-            });
-        }
-
-        function clearAllStudents() {
-            if (confirm("Remove all students from Firebase?")) {
-                db.ref('students').remove().then(() => alert("Cleared!"));
-            }
-        }
-
-        function renderTeacherStudents(students, roomsList) {
-            const list = document.getElementById('teacher-students-list');
-            const roomKeys = Object.keys(roomsList);
-            list.innerHTML = '';
-            Object.entries(students).forEach(([id, st]) => {
-                const roomButtons = roomKeys.map(rk => `
-                    <button onclick="assignRoom('${id}', '${rk}')" class="room-btn px-2 py-1 rounded text-xs font-medium border ${st.room === rk ? 'room-active' : 'bg-indigo-50 text-indigo-700'}">${escapeHtml(roomsList[rk])}</button>
-                `).join('');
-                const row = document.createElement('div');
-                row.className = 'p-3 bg-slate-50 border rounded-xl flex items-center justify-between flex-wrap gap-2';
-                row.innerHTML = `<div><strong>${escapeHtml(st.name)}</strong><span class="text-xs text-slate-500 block">Status: ${st.room || 'Lobby'}</span></div><div class="flex gap-1">${roomButtons}</div>`;
-                list.appendChild(row);
-            });
-            if (Object.keys(students).length === 0) list.innerHTML = '<p class="text-sm text-slate-400">No students connected.</p>';
-        }
-
-        function assignRoom(studentId, roomKey) {
-            db.ref(`students/${studentId}`).update({ room: roomKey, status: 'in-activity' });
-        }
-
-        function controlTimer(action) {
-            db.ref('timer').transaction(current => {
-                let seconds = current ? current.seconds : 1800;
-                if (action === 'reset') seconds = 1800;
-                return { seconds, running: action === 'play' };
-            });
-        }
-
-        setInterval(() => {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('role') === 'teacher') {
-                db.ref('timer').once('value', snapshot => {
-                    const t = snapshot.val();
-                    if (t && t.running && t.seconds > 0) db.ref('timer/seconds').set(t.seconds - 1);
+        function initTeacherTabs() {
+            if (teacherTabsInited) return;
+            teacherTabsInited = true;
+            $$('.teacher-tab').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    $$('.teacher-tab').forEach(b => {
+                        b.className =
+                            'teacher-tab px-5 py-2 rounded-xl text-sm font-medium bg-white/5 text-slate-400 border border-white/5';
+                    });
+                    btn.className =
+                        'teacher-tab px-5 py-2 rounded-xl text-sm font-medium bg-indigo-600/30 text-white border border-indigo-500/30';
+                    $$('.teacher-tab-content').forEach(el => el.classList.add('hidden-screen'));
+                    const id = btn.dataset.tab;
+                    $(id).classList.remove('hidden-screen');
                 });
-            }
-        }, 1000);
+            });
+            // Activate first tab
+            const first = document.querySelector('.teacher-tab');
+            if (first) first.click();
 
-        function openModal(title, html) {
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-body').innerHTML = html;
-            document.getElementById('modal-container').classList.remove('hidden-screen');
+            // Setup each activity
+            setupTeacherActivity('a');
+            setupTeacherActivity('b');
+            setupTeacherActivity('c');
         }
-        function closeModal() { document.getElementById('modal-container').classList.add('hidden-screen'); }
+
+        function setupTeacherActivity(letter) {
+            const generateBtn = $(`teacher-${letter}-generate`);
+            const statusEl = $(`teacher-${letter}-status`);
+            const previewDiv = $(`teacher-${letter}-preview`);
+            const questionsTextarea = $(`teacher-${letter}-questions`);
+            const saveBtn = $(`teacher-${letter}-save`);
+            const fileInput = $(`teacher-${letter}-file`);
+            const urlInput = $(`teacher-${letter}-url`);
+            const summaryInput = $(`teacher-${letter}-summary`);
+
+            if (!generateBtn) return;
+
+            generateBtn.addEventListener('click', async () => {
+                const summary = summaryInput.value.trim();
+                if (!summary) {
+                    statusEl.textContent = '⚠️ Paste a transcript first.';
+                    statusEl.className = 'text-xs text-rose-400';
+                    return;
+                }
+                statusEl.textContent = '⏳ Generating with AI...';
+                statusEl.className = 'text-xs text-slate-400';
+                generateBtn.disabled = true;
+
+                try {
+                    const prompt = buildTeacherPrompt(letter, summary);
+                    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + GROQ_API_KEY
+                        },
+                        body: JSON.stringify({
+                            model: GROQ_MODEL,
+                            temperature: 0.5,
+                            response_format: { type: 'json_object' },
+                            messages: [
+                                { role: 'system',
+                                    content: 'You are an expert English teacher for C-level executives. Generate questions for listening activities based on the provided transcript. Output valid JSON only. Use the exact format required.' },
+                                { role: 'user', content: prompt }
+                            ]
+                        })
+                    });
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error('Groq error ' + response.status + ': ' + errText.slice(0, 200));
+                    }
+                    const data = await response.json();
+                    const raw = data.choices[0].message.content;
+                    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) throw new Error('No JSON found.');
+                    const parsed = JSON.parse(jsonMatch[0]);
+                    questionsTextarea.value = JSON.stringify(parsed, null, 2);
+                    previewDiv.classList.remove('hidden-screen');
+                    statusEl.textContent = '✅ Generated! Review and save.';
+                    statusEl.className = 'text-xs text-emerald-400';
+                } catch (err) {
+                    console.error(err);
+                    statusEl.textContent = '⚠️ ' + err.message + ' — using fallback.';
+                    statusEl.className = 'text-xs text-rose-400';
+                    const fallback = generateFallback(letter, summary);
+                    questionsTextarea.value = JSON.stringify(fallback, null, 2);
+                    previewDiv.classList.remove('hidden-screen');
+                } finally {
+                    generateBtn.disabled = false;
+                }
+            });
+
+            saveBtn.addEventListener('click', () => {
+                let parsed;
+                try {
+                    parsed = JSON.parse(questionsTextarea.value);
+                } catch (e) {
+                    statusEl.textContent = '⚠️ Invalid JSON. Fix it.';
+                    statusEl.className = 'text-xs text-rose-400';
+                    return;
+                }
+                const audioFile = fileInput.value.trim();
+                const audioUrl = urlInput.value.trim();
+                const dataToSave = { audioFile, audioUrl, ...parsed };
+                db.ref(`activities/${letter}`).set(dataToSave).then(() => {
+                    statusEl.textContent = '✅ Saved to Firebase! Students see it live.';
+                    statusEl.className = 'text-xs text-emerald-400 font-medium';
+                }).catch(err => {
+                    statusEl.textContent = '⚠️ Firebase error: ' + err.message;
+                    statusEl.className = 'text-xs text-rose-400';
+                });
+            });
+        }
+
+        function buildTeacherPrompt(letter, summary) {
+            const s = summary.length > 2000 ? summary.slice(0, 2000) + '...' : summary;
+            if (letter === 'a') {
+                return `Based on this transcript of a CFO earnings call, generate exactly 8 fill-in-the-blank questions. Each question has a "label" (e.g., "Revenue growth (%)") and a "correctAnswer" (extracted from the text). Output: { "questions": [ { "label": "...", "correctAnswer": "..." } ] }. Transcript: ${s}`;
+            } else if (letter === 'b') {
+                return `Based on this conversation, generate 3 multiple-choice questions about tone, subtext, and underlying message. Each has a "label", an array of 3 "options", and a "correctIndex" (0,1,2). Output: { "questions": [ { "label": "...", "options": ["...","...","..."], "correctIndex": 0 } ] }. Transcript: ${s}`;
+            } else if (letter === 'c') {
+                return `Based on this debate, generate a list of 8 arguments with "text" and "correctPerson" ("maria" or "james"). Also generate a final question with "label" (e.g., "Who won the debate and why?"). Output: { "arguments": [ { "text": "...", "correctPerson": "maria" } ], "finalQuestion": { "label": "..." } }. Transcript: ${s}`;
+            }
+            return '';
+        }
+
+        function generateFallback(letter, summary) {
+            if (letter === 'a') {
+                return {
+                    questions: [
+                        { label: "Revenue growth (%)", correctAnswer: "14.2" },
+                        { label: "Total revenue ($ billions)", correctAnswer: "3.8" },
+                        { label: "Cloud revenue ($ billions)", correctAnswer: "1.2" },
+                        { label: "Operating margin (current %)", correctAnswer: "22.4" },
+                        { label: "Operating margin (last year %)", correctAnswer: "19.7" },
+                        { label: "Free cash flow ($ millions)", correctAnswer: "410" },
+                        { label: "Cash position ($ billions)", correctAnswer: "6.7" },
+                        { label: "Buyback program ($ billions)", correctAnswer: "2" }
+                    ]
+                };
+            } else if (letter === 'b') {
+                return {
+                    questions: [
+                        { label: "What is the manager's underlying message?", options: [
+                                "You are going to be fired", "I need a faster timeline",
+                                "The board doesn't trust you"
+                            ], correctIndex: 1 },
+                        { label: "What is the manager's tone?", options: ["Aggressive", "Supportive but firm",
+                                "Indifferent"
+                            ], correctIndex: 1 },
+                        { label: "What does the manager imply about the board?", options: [
+                                "They are satisfied", "They are losing patience",
+                                "They want to replace the manager"
+                            ], correctIndex: 1 }
+                    ]
+                };
+            } else {
+                return {
+                    arguments: [
+                        { text: "Europe is saturated", correctPerson: "maria" },
+                        { text: "Southeast Asia is the future", correctPerson: "maria" },
+                        { text: "Supply chain is already stretched", correctPerson: "james" },
+                        { text: "Acquire a European competitor", correctPerson: "james" },
+                        { text: "Build local partnerships in Asia", correctPerson: "maria" },
+                        { text: "ROI could be 30% in 3 years", correctPerson: "maria" },
+                        { text: "Lower risk, faster return", correctPerson: "james" },
+                        { text: "We cannot afford to wait", correctPerson: "maria" }
+                    ],
+                    finalQuestion: { label: "Who won the debate in your opinion? Why?" }
+                };
+            }
+        }
+
+        // =============================================================
+        // KEYBOARD SHORTCUT: Escape to close modal
+        // =============================================================
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // =============================================================
+        // INIT
+        // =============================================================
+        // Check URL for teacher role
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('role') === 'teacher') {
+                showTeacherPanel();
+            } else {
+                // Check if user already exists in localStorage
+                const saved = localStorage.getItem('listeninglab_user');
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        G.player.id = data.id;
+                        G.player.name = data.name;
+                        loadGameState();
+                        showScreen('screen-dashboard');
+                        renderDashboard();
+                        return;
+                    } catch (e) {}
+                }
+                showScreen('screen-landing');
+            }
+
+            // Save user on login
+            const origSubmit = $('form-setup').addEventListener('submit', () => {
+                setTimeout(() => {
+                    localStorage.setItem('listeninglab_user', JSON.stringify({ id: G.player.id,
+                        name: G.player.name }));
+                }, 100);
+            });
+        });
+
+        // Expose for inline onclick
+        window.launchMission = launchMission;
+        window.goToDashboard = goToDashboard;
+        window.showTeacherPanel = showTeacherPanel;
+        window.closeModal = closeModal;
+        window.renderDashboard = renderDashboard;
     </script>
+
 </body>
 </html>
