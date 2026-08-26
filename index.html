@@ -11,11 +11,11 @@
         .hidden-screen { display: none !important; }
         .tab-btn.active { background: #4f46e5; color: white; }
         .tab-btn { transition: 0.2s; cursor: pointer; }
-        .audio-iframe { width: 100%; height: 200px; border: none; border-radius: 12px; }
         .correct { background: #dcfce7; border-color: #22c55e; }
         .wrong { background: #fee2e2; border-color: #ef4444; }
         .btn-play { background: #22c55e; color: white; padding: 0.5rem 1.5rem; border-radius: 9999px; font-weight: 600; transition: 0.2s; }
         .btn-play:hover { background: #16a34a; }
+        audio { width: 100%; border-radius: 12px; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
@@ -101,14 +101,21 @@
     <!-- ============================================================ -->
     <div id="screen-teacher" class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hidden-screen space-y-6">
         <h2 class="text-2xl font-bold text-slate-900 border-b pb-3">🎛️ Teacher Panel</h2>
-        <p class="text-sm text-slate-500">For each activity, paste the <strong>direct audio URL</strong> (from whyp.it, e.g., <code>https://whyp.it/embeds/track/UE5aNI22OTWw?token=5fmsDh9nq1k7</code>) and a <strong>transcript/summary</strong>. Click <strong>"Generate with AI"</strong> to create questions automatically.</p>
+        <p class="text-sm text-slate-500">
+            <strong>Novo:</strong> Use <strong>URL do MP3</strong> (arquivo hospedado no GitHub Pages ou outro servidor) para o player nativo. 
+            O campo <strong>Audio URL (iframe)</strong> é opcional (fallback).
+        </p>
 
         <!-- Activity A -->
         <div class="border rounded-xl p-4 space-y-3 bg-slate-50">
             <h3 class="font-bold text-indigo-700">A – Earnings Call</h3>
             <div>
-                <label class="block text-xs font-medium text-slate-600">Audio URL (iframe src)</label>
-                <input type="text" id="teacher-a-url" class="w-full p-2 bg-white border rounded-xl text-sm" value="https://whyp.it/embeds/track/UE5aNI22OTWw?token=5fmsDh9nq1k7">
+                <label class="block text-xs font-medium text-slate-600">Audio file (MP3) – <span class="text-emerald-600">recomendado</span></label>
+                <input type="text" id="teacher-a-file" class="w-full p-2 bg-white border rounded-xl text-sm" placeholder="ex: /audio/a.mp3 ou https://exemplo.com/a.mp3" value="https://www.w3schools.com/html/horse.mp3">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600">Audio URL (iframe) – fallback</label>
+                <input type="text" id="teacher-a-url" class="w-full p-2 bg-white border rounded-xl text-sm" placeholder="https://whyp.it/embeds/..." value="">
             </div>
             <div>
                 <label class="block text-xs font-medium text-slate-600">Transcript / Summary</label>
@@ -129,8 +136,12 @@
         <div class="border rounded-xl p-4 space-y-3 bg-slate-50">
             <h3 class="font-bold text-indigo-700">B – Tone & Diplomacy</h3>
             <div>
-                <label class="block text-xs font-medium text-slate-600">Audio URL</label>
-                <input type="text" id="teacher-b-url" class="w-full p-2 bg-white border rounded-xl text-sm" value="https://whyp.it/embeds/track/lBN7ofKGMspS?token=S1tIGRwH6ER8">
+                <label class="block text-xs font-medium text-slate-600">Audio file (MP3) – <span class="text-emerald-600">recomendado</span></label>
+                <input type="text" id="teacher-b-file" class="w-full p-2 bg-white border rounded-xl text-sm" placeholder="ex: /audio/b.mp3" value="https://www.w3schools.com/html/horse.mp3">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600">Audio URL (iframe) – fallback</label>
+                <input type="text" id="teacher-b-url" class="w-full p-2 bg-white border rounded-xl text-sm" placeholder="https://whyp.it/embeds/..." value="">
             </div>
             <div>
                 <label class="block text-xs font-medium text-slate-600">Transcript / Summary</label>
@@ -151,8 +162,12 @@
         <div class="border rounded-xl p-4 space-y-3 bg-slate-50">
             <h3 class="font-bold text-indigo-700">C – Boardroom Tug‑of‑War</h3>
             <div>
-                <label class="block text-xs font-medium text-slate-600">Audio URL</label>
-                <input type="text" id="teacher-c-url" class="w-full p-2 bg-white border rounded-xl text-sm" value="https://whyp.it/embeds/track/h3iWsvnbfXGJ?token=MTGndH5iTgiI">
+                <label class="block text-xs font-medium text-slate-600">Audio file (MP3) – <span class="text-emerald-600">recomendado</span></label>
+                <input type="text" id="teacher-c-file" class="w-full p-2 bg-white border rounded-xl text-sm" placeholder="ex: /audio/c.mp3" value="https://www.w3schools.com/html/horse.mp3">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600">Audio URL (iframe) – fallback</label>
+                <input type="text" id="teacher-c-url" class="w-full p-2 bg-white border rounded-xl text-sm" placeholder="https://whyp.it/embeds/..." value="">
             </div>
             <div>
                 <label class="block text-xs font-medium text-slate-600">Transcript / Summary</label>
@@ -199,7 +214,6 @@
 
     // GROQ API KEY
     const GROQ_API_KEY = "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";
-    // Modelo corrigido: openai/gpt-oss-120b é o recomendado para substituir o llama3-70b-8192
     const GROQ_MODEL = "openai/gpt-oss-120b";
 
     // =============================================================
@@ -270,15 +284,48 @@
         }
     }
 
-    // ---------- Activity A (sem timer) ----------
-    function renderActivityA(data) {
-        const wrapper = document.getElementById('audio-a-wrapper');
-        const url = data.audioUrl || '';
-        if (url) {
-            wrapper.innerHTML = `<iframe src="${url}" class="audio-iframe" allow="autoplay"></iframe>`;
+    // ---------- Helper para criar player de áudio ----------
+    function createAudioPlayer(activityData, wrapperId, playBtnId) {
+        const wrapper = document.getElementById(wrapperId);
+        const playBtn = document.getElementById(playBtnId);
+        let audioElement = null;
+
+        // Prioriza audioFile (MP3) se existir
+        const mp3Url = activityData.audioFile || '';
+        const iframeUrl = activityData.audioUrl || '';
+
+        if (mp3Url) {
+            // Cria player nativo
+            audioElement = document.createElement('audio');
+            audioElement.controls = true;
+            audioElement.preload = 'metadata';
+            audioElement.style.width = '100%';
+            const source = document.createElement('source');
+            source.src = mp3Url;
+            source.type = 'audio/mpeg';
+            audioElement.appendChild(source);
+            wrapper.innerHTML = '';
+            wrapper.appendChild(audioElement);
+            // Botão Play chama play()
+            playBtn.onclick = () => {
+                if (audioElement) audioElement.play().catch(e => console.warn('Autoplay bloqueado:', e));
+            };
+        } else if (iframeUrl) {
+            // Fallback para iframe
+            wrapper.innerHTML = `<iframe src="${iframeUrl}" class="audio-iframe" allow="autoplay; encrypted-media" style="width:100%;height:200px;border:none;border-radius:12px;"></iframe>`;
+            playBtn.onclick = () => {
+                const iframe = wrapper.querySelector('iframe');
+                if (iframe) iframe.src = iframe.src;
+            };
         } else {
-            wrapper.innerHTML = '<p class="text-slate-400 p-4">No audio URL set.</p>';
+            wrapper.innerHTML = '<p class="text-slate-400 p-4">Nenhum áudio configurado.</p>';
+            playBtn.onclick = () => {};
         }
+    }
+
+    // ---------- Activity A ----------
+    function renderActivityA(data) {
+        createAudioPlayer(data, 'audio-a-wrapper', 'a-play-btn');
 
         const container = document.getElementById('a-questions');
         container.innerHTML = '';
@@ -297,13 +344,6 @@
             container.innerHTML = '<p class="text-slate-400">No questions loaded yet.</p>';
         }
 
-        // Play button apenas recarrega o iframe
-        document.getElementById('a-play-btn').onclick = () => {
-            const iframe = wrapper.querySelector('iframe');
-            if (iframe) iframe.src = iframe.src;
-        };
-
-        // Check answers
         document.getElementById('a-check-btn').onclick = () => {
             if (!data.questions) return;
             let correctCount = 0;
@@ -329,13 +369,7 @@
 
     // ---------- Activity B ----------
     function renderActivityB(data) {
-        const wrapper = document.getElementById('audio-b-wrapper');
-        const url = data.audioUrl || '';
-        if (url) {
-            wrapper.innerHTML = `<iframe src="${url}" class="audio-iframe" allow="autoplay"></iframe>`;
-        } else {
-            wrapper.innerHTML = '<p class="text-slate-400 p-4">No audio URL set.</p>';
-        }
+        createAudioPlayer(data, 'audio-b-wrapper', 'b-play-btn');
 
         const container = document.getElementById('b-questions');
         container.innerHTML = '';
@@ -360,11 +394,6 @@
             container.innerHTML = '<p class="text-slate-400">No questions loaded yet.</p>';
         }
 
-        document.getElementById('b-play-btn').onclick = () => {
-            const iframe = wrapper.querySelector('iframe');
-            if (iframe) iframe.src = iframe.src;
-        };
-
         document.getElementById('b-check-btn').onclick = () => {
             if (!data.questions) return;
             let correctCount = 0;
@@ -388,13 +417,7 @@
 
     // ---------- Activity C ----------
     function renderActivityC(data) {
-        const wrapper = document.getElementById('audio-c-wrapper');
-        const url = data.audioUrl || '';
-        if (url) {
-            wrapper.innerHTML = `<iframe src="${url}" class="audio-iframe" allow="autoplay"></iframe>`;
-        } else {
-            wrapper.innerHTML = '<p class="text-slate-400 p-4">No audio URL set.</p>';
-        }
+        createAudioPlayer(data, 'audio-c-wrapper', 'c-play-btn');
 
         const container = document.getElementById('c-questions');
         container.innerHTML = '';
@@ -424,11 +447,6 @@
         } else {
             container.innerHTML = '<p class="text-slate-400">No arguments loaded yet.</p>';
         }
-
-        document.getElementById('c-play-btn').onclick = () => {
-            const iframe = wrapper.querySelector('iframe');
-            if (iframe) iframe.src = iframe.src;
-        };
 
         document.getElementById('c-check-btn').onclick = () => {
             if (!data.arguments) return;
@@ -470,6 +488,7 @@
         const previewDiv = document.getElementById(`teacher-${letter}-preview`);
         const questionsTextarea = document.getElementById(`teacher-${letter}-questions`);
         const saveBtn = document.getElementById(`teacher-${letter}-save`);
+        const fileInput = document.getElementById(`teacher-${letter}-file`);
         const urlInput = document.getElementById(`teacher-${letter}-url`);
         const summaryInput = document.getElementById(`teacher-${letter}-summary`);
 
@@ -536,8 +555,10 @@
                 statusEl.className = 'text-xs text-rose-600';
                 return;
             }
+            const audioFile = fileInput.value.trim();
             const audioUrl = urlInput.value.trim();
             const dataToSave = {
+                audioFile: audioFile,
                 audioUrl: audioUrl,
                 ...parsed
             };
