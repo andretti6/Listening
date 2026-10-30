@@ -1,1625 +1,1849 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🎧 Listening Lab · Mission Control</title>
-    <script src="https://cdn.tailwindcss.com">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js">
-    </script>
-    <style>
-        /* ===== BASE ===== */
-        * {
-            box-sizing: border-box;
-        }
-        body {
-            background: linear-gradient(145deg, #0b0f1c 0%, #1a1f33 100%);
-            min-height: 100vh;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: #e8edf5;
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Two Futures · 4 Debates + 2 Listening Tasks (Teens)</title>
 
-        /* ===== SCROLLBAR ===== */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1e243b;
-            border-radius: 8px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #4f46e5;
-            border-radius: 8px;
-        }
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
-        /* ===== UTILITY ===== */
-        .hidden-screen {
-            display: none !important;
-        }
-        .glass {
-            background: rgba(255, 255, 255, 0.06);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .glass-light {
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-        }
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* ===== GLOW ===== */
-        .glow-indigo {
-            box-shadow: 0 0 40px -8px rgba(79, 70, 229, 0.3);
-        }
-        .glow-emerald {
-            box-shadow: 0 0 40px -8px rgba(52, 211, 153, 0.25);
-        }
-        .glow-amber {
-            box-shadow: 0 0 40px -8px rgba(251, 191, 36, 0.25);
-        }
+    body {
+        font-family: 'Inter', sans-serif;
+        background: #eef3fa;
+        background-image:
+            radial-gradient(circle at 10% 4%, rgba(29, 78, 216, 0.09), transparent 40%),
+            radial-gradient(circle at 90% 96%, rgba(15, 118, 110, 0.09), transparent 40%);
+        background-attachment: fixed;
+        color: #13202d;
+        min-height: 100vh;
+        padding: 24px 18px 48px;
+    }
 
-        /* ===== CARDS ===== */
-        .mission-card {
-            transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-            cursor: default;
-            position: relative;
-            overflow: hidden;
-        }
-        .mission-card::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            padding: 1.5px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent 60%);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-        }
-        .mission-card.available {
-            cursor: pointer;
-        }
-        .mission-card.available:hover {
-            transform: translateY(-6px) scale(1.01);
-            border-color: rgba(79, 70, 229, 0.4);
-        }
-        .mission-card.locked {
-            opacity: 0.5;
-            filter: grayscale(0.6);
-        }
-        .mission-card.completed {
-            border-color: rgba(52, 211, 153, 0.3);
-        }
+    .app { max-width: 1180px; margin: 0 auto; }
+    .hidden { display: none !important; }
 
-        /* ===== STARS ===== */
-        .star-filled {
-            color: #fbbf24;
-            text-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
-        }
-        .star-empty {
-            color: #334155;
-        }
+    /* ---------- JOIN SCREEN ---------- */
+    .join-screen {
+        max-width: 480px; margin: 60px auto 0;
+        background: #ffffff; border-radius: 28px;
+        border: 1px solid #e6eef6;
+        box-shadow: 0 24px 60px rgba(20, 45, 80, 0.14);
+        padding: 32px 30px 28px;
+        animation: popIn 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+    }
+    @keyframes popIn {
+        from { opacity: 0; transform: translateY(18px) scale(0.95); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .join-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+    .join-logo {
+        width: 54px; height: 54px; border-radius: 17px;
+        background: linear-gradient(135deg, #1d4ed8, #0f766e);
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        font-size: 22px; box-shadow: 0 10px 24px rgba(29, 78, 216, 0.28);
+        flex-shrink: 0;
+    }
+    .join-brand h1 { font-size: 21px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.2; }
+    .join-brand h1 span { color: #1d4ed8; }
+    .join-brand p { font-size: 12.5px; color: #6b8299; font-weight: 500; margin-top: 3px; }
 
-        /* ===== PROGRESS RING ===== */
-        .progress-ring {
-            transition: stroke-dashoffset 0.8s ease;
-        }
+    .room-info {
+        background: #f7fafd; border: 1.5px solid #e2ecf5;
+        border-radius: 13px; padding: 12px 15px;
+        display: flex; align-items: center; gap: 10px;
+        margin-bottom: 16px; font-size: 12.5px; font-weight: 600;
+        color: #4a6580;
+    }
+    .room-info i { color: #1d4ed8; font-size: 14px; }
+    .room-info b { color: #13202d; letter-spacing: 1px; font-weight: 800; }
 
-        /* ===== BUTTONS ===== */
-        .btn-primary {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: #fff;
-            font-weight: 600;
-            padding: 0.75rem 2rem;
-            border-radius: 9999px;
-            transition: all 0.25s ease;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 4px 20px -4px rgba(79, 70, 229, 0.35);
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 32px -6px rgba(79, 70, 229, 0.5);
-        }
-        .btn-primary:active {
-            transform: scale(0.97);
-        }
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
+    .field { margin-bottom: 14px; }
+    .field label {
+        display: block; font-size: 10.5px; font-weight: 800;
+        letter-spacing: 0.8px; text-transform: uppercase;
+        color: #7d92a8; margin-bottom: 7px;
+    }
+    .field input {
+        width: 100%; padding: 13px 15px; border-radius: 13px;
+        border: 1.5px solid #dbe7f1; background: #f7fafd;
+        font-family: inherit; font-size: 15px; font-weight: 600;
+        color: #13202d; outline: none; transition: all 0.15s;
+    }
+    .field input::placeholder { color: #a8bacb; font-weight: 500; }
+    .field input:focus { border-color: #1d4ed8; background: #fff; box-shadow: 0 0 0 4px #eaf1ff; }
 
-        .btn-success {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: #fff;
-            font-weight: 600;
-            padding: 0.75rem 2rem;
-            border-radius: 9999px;
-            transition: all 0.25s ease;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 4px 20px -4px rgba(16, 185, 129, 0.3);
-        }
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 32px -6px rgba(16, 185, 129, 0.45);
-        }
+    .join-btn {
+        width: 100%; border: none; border-radius: 40px;
+        background: linear-gradient(135deg, #1d4ed8, #16389b);
+        color: #fff; padding: 15px 24px;
+        font-family: inherit; font-size: 15.5px; font-weight: 800;
+        cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+        box-shadow: 0 10px 24px rgba(29, 78, 216, 0.32);
+        transition: all 0.2s;
+    }
+    .join-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(29, 78, 216, 0.4); }
+    .join-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-        .btn-ghost {
-            background: rgba(255, 255, 255, 0.06);
-            color: #c8d0e0;
-            font-weight: 500;
-            padding: 0.6rem 1.5rem;
-            border-radius: 9999px;
-            transition: all 0.2s ease;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            cursor: pointer;
-        }
-        .btn-ghost:hover {
-            background: rgba(255, 255, 255, 0.12);
-            color: #fff;
-        }
+    .join-error {
+        background: #fdeaea; color: #8f2f2f;
+        border: 1.5px solid #f6d5d5; border-radius: 12px;
+        padding: 11px 14px; font-size: 13px; font-weight: 600;
+        display: flex; align-items: flex-start; gap: 9px;
+        margin-top: 14px; line-height: 1.45;
+    }
+    .join-error i { margin-top: 2px; flex-shrink: 0; }
 
-        /* ===== AUDIO PLAYER ===== */
-        .audio-wave {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            height: 48px;
-        }
-        .audio-wave .bar {
-            width: 4px;
-            border-radius: 4px;
-            background: linear-gradient(180deg, #4f46e5, #7c3aed);
-            transition: height 0.2s ease;
-            height: 12px;
-        }
-        .audio-wave .bar:nth-child(1) {
-            height: 18px;
-        }
-        .audio-wave .bar:nth-child(2) {
-            height: 28px;
-        }
-        .audio-wave .bar:nth-child(3) {
-            height: 14px;
-        }
-        .audio-wave .bar:nth-child(4) {
-            height: 34px;
-        }
-        .audio-wave .bar:nth-child(5) {
-            height: 22px;
-        }
-        .audio-wave .bar:nth-child(6) {
-            height: 38px;
-        }
-        .audio-wave .bar:nth-child(7) {
-            height: 16px;
-        }
-        .audio-wave .bar:nth-child(8) {
-            height: 26px;
-        }
-        .audio-wave .bar:nth-child(9) {
-            height: 32px;
-        }
-        .audio-wave .bar:nth-child(10) {
-            height: 20px;
-        }
-        .audio-wave .bar:nth-child(11) {
-            height: 30px;
-        }
-        .audio-wave .bar:nth-child(12) {
-            height: 14px;
-        }
-        .audio-wave .bar:nth-child(13) {
-            height: 24px;
-        }
-        .audio-wave .bar:nth-child(14) {
-            height: 36px;
-        }
-        .audio-wave .bar:nth-child(15) {
-            height: 18px;
-        }
-        .audio-wave .bar:nth-child(16) {
-            height: 28px;
-        }
+    .join-hint {
+        font-size: 12px; line-height: 1.55; color: #8098ad;
+        margin-top: 16px; padding-top: 16px;
+        border-top: 1px dashed #e2ecf5; text-align: center; font-weight: 500;
+    }
 
-        .audio-wave.playing .bar {
-            animation: wave-bounce 0.5s ease-in-out infinite alternate;
-        }
-        .audio-wave.playing .bar:nth-child(2n) {
-            animation-delay: 0.1s;
-        }
-        .audio-wave.playing .bar:nth-child(3n) {
-            animation-delay: 0.2s;
-        }
+    /* ---------- TOP BAR ---------- */
+    .topbar {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 10px; flex-wrap: wrap;
+        background: #ffffff; border: 1px solid #e6eef6; border-radius: 20px;
+        padding: 12px 16px;
+        box-shadow: 0 10px 26px rgba(20, 45, 80, 0.08);
+        margin-bottom: 12px;
+        position: sticky; top: 10px; z-index: 100;
+    }
+    .room-chip {
+        display: flex; align-items: center; gap: 9px;
+        background: #f2f7fc; border-radius: 40px; padding: 8px 15px;
+        font-size: 13px; font-weight: 700; color: #4a6580;
+    }
+    .room-chip i { color: #1d4ed8; font-size: 13px; }
+    .room-chip b { color: #13202d; letter-spacing: 0.5px; }
+    .me-chip {
+        display: flex; align-items: center; gap: 9px;
+        border-radius: 40px; padding: 6px 14px 6px 8px;
+        font-size: 13px; font-weight: 700;
+    }
+    .me-chip.A { background: #eaf1ff; color: #1d4ed8; }
+    .me-chip.B { background: #e3f5f2; color: #0f766e; }
+    .me-chip.C { background: #fff4e0; color: #b45309; }
+    .me-chip.ghost { background: #f1ebff; color: #7c3aed; }
+    .me-dot {
+        width: 26px; height: 26px; border-radius: 50%;
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        font-size: 11px; font-weight: 800;
+    }
+    .me-chip.A .me-dot { background: #1d4ed8; }
+    .me-chip.B .me-dot { background: #0f766e; }
+    .me-chip.C .me-dot { background: #b45309; }
+    .me-chip.ghost .me-dot { background: #7c3aed; font-size: 14px; }
+    .leave-btn {
+        border: none; background: transparent; color: #8098ad;
+        border-radius: 30px; padding: 8px 14px;
+        font-family: inherit; font-size: 12px; font-weight: 700;
+        cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+        transition: all 0.15s;
+    }
+    .leave-btn:hover { background: #fdeaea; color: #a13d3d; }
 
-        @keyframes wave-bounce {
-            0% {
-                transform: scaleY(0.5);
-            }
-            100% {
-                transform: scaleY(1);
-            }
-        }
+    .reset-answers-btn {
+        border: 1.5px solid #f0c88a;
+        background: #fff4e0;
+        color: #a0690c;
+        border-radius: 30px;
+        padding: 7px 14px;
+        font-family: inherit; font-size: 12px; font-weight: 800;
+        cursor: pointer;
+        display: inline-flex; align-items: center; gap: 6px;
+        transition: all 0.15s;
+    }
+    .reset-answers-btn:hover {
+        background: #ffe9c9;
+        border-color: #e0a860;
+        color: #7a4a00;
+        transform: translateY(-1px);
+    }
 
-        /* ===== QUESTION CARDS ===== */
-        .q-card {
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 16px;
-            padding: 1rem 1.25rem;
-            background: rgba(255, 255, 255, 0.03);
-        }
-        .q-card.correct {
-            border-color: rgba(52, 211, 153, 0.4);
-            background: rgba(52, 211, 153, 0.06);
-        }
-        .q-card.wrong {
-            border-color: rgba(239, 68, 68, 0.35);
-            background: rgba(239, 68, 68, 0.06);
-        }
+    /* ---------- LOCATION BANNER ---------- */
+    .location-banner {
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        background: linear-gradient(135deg, #1d4ed8 0%, #16389b 100%);
+        color: #fff;
+        border-radius: 16px;
+        padding: 14px 20px;
+        margin-bottom: 22px;
+        box-shadow: 0 12px 28px rgba(29, 78, 216, 0.28);
+    }
+    .loc-info {
+        display: flex; align-items: center; gap: 10px;
+        font-size: 14.5px; font-weight: 700;
+        flex: 1; min-width: 0;
+    }
+    .loc-info i { font-size: 17px; color: #ffd166; flex-shrink: 0; }
+    .loc-step-num {
+        background: rgba(255, 255, 255, 0.18);
+        padding: 3px 10px; border-radius: 30px;
+        font-size: 11.5px; font-weight: 800; letter-spacing: 0.4px;
+        flex-shrink: 0;
+    }
+    .loc-step-title {
+        font-weight: 800; letter-spacing: -0.2px;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .loc-team-score {
+        display: flex; align-items: center; gap: 8px;
+        background: rgba(255, 255, 255, 0.16);
+        border: 1.5px solid rgba(255, 255, 255, 0.28);
+        border-radius: 30px; padding: 7px 16px;
+        font-size: 13px; font-weight: 800;
+        flex-shrink: 0;
+    }
+    .loc-team-score i { color: #ffd166; }
+    .loc-team-score b { font-size: 16px; letter-spacing: 0.5px; }
+    .loc-guide-btn {
+        border: none; border-radius: 30px;
+        background: #ffd166; color: #7a4a00;
+        padding: 9px 18px;
+        font-family: inherit; font-size: 12.5px; font-weight: 800;
+        cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transition: all 0.15s;
+        flex-shrink: 0;
+    }
+    .loc-guide-btn:hover { background: #ffdf8a; transform: translateY(-1px); }
 
-        /* ===== OPTIONS ===== */
-        .option-label {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.6rem 1rem;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            background: rgba(255, 255, 255, 0.02);
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-        .option-label:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.12);
-        }
-        .option-label input[type="radio"] {
-            accent-color: #4f46e5;
-            width: 18px;
-            height: 18px;
-            flex-shrink: 0;
-        }
-        .option-label.correct-answer {
-            border-color: rgba(52, 211, 153, 0.5);
-            background: rgba(52, 211, 153, 0.08);
-        }
-        .option-label.wrong-answer {
-            border-color: rgba(239, 68, 68, 0.4);
-            background: rgba(239, 68, 68, 0.08);
-        }
+    /* ---------- SECTIONS ---------- */
+    .section {
+        display: none; background: #ffffff;
+        border: 1px solid #e6eef6; border-radius: 26px;
+        box-shadow: 0 16px 38px rgba(20, 45, 80, 0.09);
+        overflow: hidden;
+    }
+    .section.active-step { display: block; animation: fadeSwap 0.4s ease-out; }
+    @keyframes fadeSwap {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .section-head {
+        padding: 20px 26px 16px;
+        display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        border-bottom: 1px solid #eaf1f8;
+    }
+    .sec-badge {
+        display: inline-flex; align-items: center; gap: 7px;
+        background: #eaf1ff; color: #1d4ed8;
+        padding: 5px 14px; border-radius: 30px;
+        font-size: 11px; font-weight: 800; letter-spacing: 0.7px;
+        text-transform: uppercase; white-space: nowrap;
+    }
+    .sec-badge.listen { background: #f1ebff; color: #7c3aed; }
+    .sec-title {
+        font-size: 21px; font-weight: 800; letter-spacing: -0.3px;
+        color: #13202d; line-height: 1.25;
+    }
+    .sec-num {
+        margin-left: auto; font-size: 12px; font-weight: 800;
+        color: #8098ad; background: #f2f7fc; border-radius: 40px;
+        padding: 6px 15px; white-space: nowrap;
+    }
+    .section-body { padding: 22px 26px 24px; }
 
-        /* ===== INPUT TEXT ===== */
-        .input-game {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            padding: 0.7rem 1rem;
-            color: #e8edf5;
-            width: 100%;
-            transition: all 0.2s ease;
-            font-size: 0.95rem;
-        }
-        .input-game:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-        }
-        .input-game::placeholder {
-            color: #6b7299;
-        }
+    /* ---------- THEME — arena ---------- */
+    .arena {
+        display: grid; grid-template-columns: 1fr auto 1fr;
+        gap: 14px; align-items: stretch; margin-bottom: 20px;
+    }
+    .side {
+        background: var(--tint); border: 2px solid transparent;
+        border-radius: 18px; padding: 18px 16px;
+        display: flex; flex-direction: column; align-items: center;
+        text-align: center; gap: 10px;
+        transition: all 0.2s;
+    }
+    .side:hover { border-color: var(--accent); transform: translateY(-3px); }
+    .side-icon-circle {
+        width: 96px; height: 96px; border-radius: 50%;
+        background: #ffffff; display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 8px 20px rgba(20, 45, 80, 0.14);
+        color: var(--accent); font-size: 42px; flex-shrink: 0;
+    }
+    .side-label {
+        font-size: 10px; font-weight: 800; letter-spacing: 1px;
+        text-transform: uppercase; color: var(--accent);
+        background: #ffffff; padding: 4px 12px; border-radius: 30px;
+    }
+    .side-name {
+        font-size: 16px; font-weight: 800; color: #13202d;
+        line-height: 1.2; letter-spacing: -0.2px;
+    }
+    .side-desc {
+        font-size: 11.5px; font-weight: 500; color: #5a7189;
+        line-height: 1.45; max-width: 220px;
+    }
+    .vs-circle {
+        align-self: center; width: 46px; height: 46px; border-radius: 50%;
+        background: #ffffff; border: 2px solid #e2ecf5;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 800; color: #6b8299;
+        letter-spacing: 0.5px; flex-shrink: 0;
+        box-shadow: 0 8px 20px rgba(20, 45, 80, 0.1);
+    }
 
-        /* ===== MODAL ===== */
-        .modal-overlay {
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-        }
+    .theme-q {
+        background: #f7fafd; border-radius: 15px;
+        padding: 16px 20px; margin-bottom: 16px;
+        display: flex; align-items: flex-start; gap: 12px;
+        border-left: 4px solid #1d4ed8;
+    }
+    .theme-q i { color: #1d4ed8; font-size: 17px; margin-top: 2px; flex-shrink: 0; }
+    .theme-q p {
+        font-size: 16.5px; font-weight: 700; color: #13202d;
+        line-height: 1.45; letter-spacing: -0.2px;
+    }
 
-        /* ===== TEACHER PANEL ===== */
-        .teacher-input {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            padding: 0.6rem 1rem;
-            color: #e8edf5;
-            width: 100%;
-            transition: all 0.2s ease;
-            font-size: 0.9rem;
-        }
-        .teacher-input:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
-        }
-        .teacher-input::placeholder {
-            color: #6b7299;
-        }
-        .teacher-textarea {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            padding: 0.6rem 1rem;
-            color: #e8edf5;
-            width: 100%;
-            transition: all 0.2s ease;
-            font-size: 0.9rem;
-            font-family: 'Monaco', 'Menlo', monospace;
-            resize: vertical;
-            min-height: 80px;
-        }
-        .teacher-textarea:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
-        }
+    .chips-label {
+        font-size: 10.5px; font-weight: 800; letter-spacing: 0.9px;
+        text-transform: uppercase; color: #98aec2; margin-bottom: 8px;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .chip {
+        background: #f4f8fd; border: 1.5px solid #dbe7f1; color: #33526e;
+        font-size: 13px; font-weight: 700; padding: 7px 15px;
+        border-radius: 40px; transition: all 0.15s;
+    }
+    .chip:hover {
+        background: #eaf1ff; border-color: #1d4ed8; color: #1d4ed8;
+        transform: translateY(-2px);
+    }
 
-        /* ===== ANIMATIONS ===== */
-        @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(24px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .fade-up {
-            animation: fadeUp 0.5s ease forwards;
-        }
+    .proscons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .pc-box {
+        border-radius: 15px; padding: 13px 16px;
+        display: flex; align-items: flex-start; gap: 10px;
+        font-size: 13.5px; font-weight: 600; line-height: 1.45;
+    }
+    .pc-box i { font-size: 15px; margin-top: 1px; flex-shrink: 0; }
+    .pc-box.pros { background: #eafaf1; border: 1.5px solid #c6ebd8; color: #14603c; }
+    .pc-box.pros i { color: #16a34a; }
+    .pc-box.cons { background: #fdf0f0; border: 1.5px solid #f6d5d5; color: #8f2f2f; }
+    .pc-box.cons i { color: #dc2626; }
 
-        @keyframes pulse-glow {
-            0%,
-            100% {
-                box-shadow: 0 0 20px -4px rgba(79, 70, 229, 0.2);
-            }
-            50% {
-                box-shadow: 0 0 40px -4px rgba(79, 70, 229, 0.4);
-            }
-        }
-        .pulse-glow {
-            animation: pulse-glow 2.5s ease-in-out infinite;
-        }
+    /* ---------- LISTENING ---------- */
+    .listening-section .section-head {
+        background: linear-gradient(135deg, #f1ebff 0%, #eaf1ff 100%);
+    }
+    .listening-section .sec-badge.listen { background: #ffffff; color: #7c3aed; }
+    .listening-section.listen2 .section-head {
+        background: linear-gradient(135deg, #e3f5f2 0%, #eafaf1 100%);
+    }
+    .listening-section.listen2 .sec-badge.listen { background: #ffffff; color: #0f766e; }
 
-        @keyframes starPop {
-            0% {
-                transform: scale(0) rotate(-20deg);
-                opacity: 0;
-            }
-            60% {
-                transform: scale(1.3) rotate(8deg);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(1) rotate(0);
-            }
-        }
-        .star-pop {
-            animation: starPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
+    /* ---------- AUTH PANEL ---------- */
+    .auth-panel {
+        border-radius: 15px; padding: 16px 20px;
+        margin-bottom: 16px;
+        display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .auth-panel.locked {
+        background: #f7fafd; border: 1.5px dashed #c5d8eb;
+        color: #55708b;
+    }
+    .auth-panel.locked i.icon { color: #8098ad; font-size: 20px; flex-shrink: 0; }
+    .auth-panel.locked strong { display: block; color: #13202d; font-size: 14px; margin-bottom: 2px; }
+    .auth-panel.locked p { font-size: 12.5px; font-weight: 500; }
 
-        @keyframes confettiFall {
-            0% {
-                transform: translateY(-20px) rotate(0deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(120px) rotate(720deg);
-                opacity: 0;
-            }
-        }
+    .auth-panel.go {
+        background: linear-gradient(135deg, #16a34a 0%, #0d9488 100%);
+        color: #fff;
+        box-shadow: 0 12px 28px rgba(22, 163, 74, 0.28);
+        animation: goBounce 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.15) both,
+                   goPulse 2s ease-in-out 0.6s infinite;
+    }
+    @keyframes goBounce {
+        0%   { opacity: 0; transform: scale(0.6); }
+        60%  { opacity: 1; transform: scale(1.05); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes goPulse {
+        0%, 100% { box-shadow: 0 12px 28px rgba(22, 163, 74, 0.28), 0 0 0 0 rgba(22, 163, 74, 0.5); }
+        50%      { box-shadow: 0 12px 28px rgba(22, 163, 74, 0.28), 0 0 0 14px rgba(22, 163, 74, 0); }
+    }
+    .auth-panel.go .go-icon {
+        font-size: 28px; flex-shrink: 0;
+        animation: goWiggle 1.6s ease-in-out infinite;
+    }
+    @keyframes goWiggle {
+        0%, 100% { transform: rotate(0deg); }
+        25%      { transform: rotate(-12deg); }
+        75%      { transform: rotate(12deg); }
+    }
+    .auth-panel.go strong { display: block; font-size: 17px; font-weight: 800; margin-bottom: 2px; letter-spacing: -0.2px; }
+    .auth-panel.go p { font-size: 12.5px; opacity: 0.9; font-weight: 500; }
 
-        /* ===== MISSION PROGRESS ===== */
-        .step-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .step-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.12);
-            transition: all 0.3s ease;
-        }
-        .step-dot.active {
-            background: #4f46e5;
-            box-shadow: 0 0 16px rgba(79, 70, 229, 0.4);
-        }
-        .step-dot.done {
-            background: #10b981;
-        }
+    .auth-panel.ghost {
+        background: #f1ebff; border: 1.5px solid #d6c7f5;
+        color: #5b21b6;
+    }
+    .auth-panel.ghost i.icon { color: #7c3aed; font-size: 20px; flex-shrink: 0; }
+    .auth-panel.ghost strong { display: block; color: #4c1d95; font-size: 14px; margin-bottom: 2px; }
+    .auth-panel.ghost p { font-size: 12.5px; font-weight: 500; opacity: 0.85; }
+    .auth-btn {
+        margin-left: auto;
+        border: none; border-radius: 40px;
+        padding: 10px 20px;
+        font-family: inherit; font-size: 13px; font-weight: 800;
+        cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+        transition: all 0.15s;
+        flex-shrink: 0;
+    }
+    .auth-btn.authorize {
+        background: #7c3aed; color: #fff;
+        box-shadow: 0 6px 16px rgba(124, 58, 237, 0.28);
+    }
+    .auth-btn.authorize:hover { background: #5b21b6; transform: translateY(-2px); box-shadow: 0 10px 22px rgba(124, 58, 237, 0.36); }
+    .auth-btn.revoke {
+        background: #fff; color: #a13d3d;
+        border: 1.5px solid #f6d5d5;
+    }
+    .auth-btn.revoke:hover { background: #fdeaea; }
 
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 640px) {
-            .mission-card-grid {
-                grid-template-columns: 1fr !important;
-            }
-            .btn-primary,
-            .btn-success {
-                padding: 0.6rem 1.5rem;
-                font-size: 0.9rem;
-                width: 100%;
-                justify-content: center;
-            }
-        }
-    </style>
+    /* ---------- AUDIO ---------- */
+    .audio-row {
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        background: #f7fafd; border: 1px solid #eaf1f8;
+        border-radius: 15px; padding: 12px 15px; margin-bottom: 14px;
+    }
+    .audio-row > i { color: #7c3aed; font-size: 18px; flex-shrink: 0; }
+    .audio-row audio { flex: 1; min-width: 240px; height: 40px; }
+    .audio-teacher-only {
+        display: flex; align-items: center; gap: 12px;
+        background: #f1ebff; border-radius: 15px;
+        padding: 14px 18px; margin-bottom: 14px;
+        color: #5b21b6; font-size: 13px; font-weight: 600;
+    }
+    .audio-teacher-only i { font-size: 18px; flex-shrink: 0; }
+    .audio-teacher-only strong { color: #4c1d95; }
+
+    .listen-intro {
+        font-size: 13.5px; line-height: 1.55; color: #4a6580;
+        font-weight: 500; margin-bottom: 16px;
+    }
+    .progress-bar {
+        display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+        padding: 12px 16px; border-radius: 14px;
+        background: #f7fafd; border: 1px solid #eaf1f8;
+        margin-bottom: 18px;
+    }
+    .prog-item {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-size: 12.5px; font-weight: 700; color: #55708b;
+        background: #ffffff; border-radius: 30px;
+        padding: 5px 13px 5px 5px; border: 1px solid #e2ecf5;
+    }
+    .prog-avatar {
+        width: 24px; height: 24px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10.5px; font-weight: 800; color: #fff;
+    }
+    .prog-avatar.A { background: #1d4ed8; }
+    .prog-avatar.B { background: #0f766e; }
+    .prog-avatar.C { background: #b45309; }
+    .prog-count { color: #1d4ed8; font-weight: 800; }
+    .prog-count.done { color: #16a34a; }
+    .prog-pts {
+        background: #fef3c7; color: #92400e;
+        padding: 2px 8px; border-radius: 20px;
+        font-size: 11px; font-weight: 800;
+    }
+    .prog-divider { color: #c5d8eb; font-weight: 800; font-size: 11px; margin: 0 2px; }
+    .prog-name { color: #8098ad; font-weight: 700; font-size: 11.5px; }
+
+    .q-columns { display: grid; gap: 14px; }
+    .q-columns[data-count="1"] { grid-template-columns: 1fr; }
+    .q-columns[data-count="2"] { grid-template-columns: 1fr 1fr; }
+    .q-columns[data-count="3"] { grid-template-columns: 1fr 1fr 1fr; }
+
+    .q-col { display: flex; flex-direction: column; gap: 12px; }
+    .q-col-head {
+        display: flex; align-items: center; gap: 9px; padding: 0 4px 2px;
+        font-size: 12px; font-weight: 800; letter-spacing: 0.4px;
+        text-transform: uppercase; color: #4a6580; flex-wrap: wrap;
+    }
+    .player-tag {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 12px; border-radius: 30px;
+        font-size: 11px; font-weight: 800; letter-spacing: 0.4px;
+        text-transform: uppercase;
+    }
+    .player-tag.A { background: #eaf1ff; color: #1d4ed8; }
+    .player-tag.B { background: #e3f5f2; color: #0f766e; }
+    .player-tag.C { background: #fff4e0; color: #b45309; }
+    .q-col-head .you-badge {
+        margin-left: auto; font-size: 10px; font-weight: 800;
+        letter-spacing: 0.6px; text-transform: uppercase;
+        color: #ffffff; background: #16a34a;
+        padding: 3px 10px; border-radius: 30px;
+    }
+
+    .q-card {
+        background: #ffffff;
+        border: 1.5px solid #e2ecf5; border-radius: 15px;
+        padding: 14px 15px; transition: all 0.2s; position: relative;
+    }
+    .q-card.not-yours {
+        background: #fafbfd;
+        border-style: dashed;
+    }
+    .q-card.not-yours .q-num-badge { opacity: 0.65; }
+    .q-card.solved {
+        border-color: #16a34a;
+        background: linear-gradient(180deg, #f3fdf7 0%, #eafaf1 100%);
+    }
+    .q-card.solved::before {
+        content: '✓'; position: absolute;
+        top: 10px; right: 12px;
+        width: 22px; height: 22px; border-radius: 50%;
+        background: #16a34a; color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 800;
+    }
+    .q-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .q-head .owner-label {
+        display: none;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: #8098ad;
+        background: #eef3f9;
+        padding: 3px 9px;
+        border-radius: 20px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+    .q-num-badge {
+        width: 26px; height: 26px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 800; flex-shrink: 0; margin-top: 1px;
+        background: #eaf1ff; color: #1d4ed8;
+    }
+    .q-col.B .q-num-badge { background: #e3f5f2; color: #0f766e; }
+    .q-col.C .q-num-badge { background: #fff4e0; color: #b45309; }
+    .q-text {
+        flex: 1; font-size: 13.5px; font-weight: 700; color: #1c3350;
+        line-height: 1.42; min-width: 180px;
+    }
+    .options { display: flex; flex-direction: column; gap: 7px; }
+    .opt {
+        width: 100%; text-align: left;
+        border: 1.5px solid #dbe7f1; background: #fbfdff;
+        border-radius: 11px; padding: 10px 12px;
+        display: flex; align-items: flex-start; gap: 10px;
+        font-family: inherit; font-size: 13px; font-weight: 600;
+        color: #33526e; line-height: 1.4;
+        cursor: pointer; transition: all 0.15s; position: relative;
+    }
+    .opt .opt-letter {
+        width: 22px; height: 22px; border-radius: 6px;
+        background: #eef3f9; color: #4a6580;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11.5px; font-weight: 800; flex-shrink: 0;
+        transition: all 0.15s;
+    }
+    .opt:hover:not(:disabled) { border-color: #1d4ed8; background: #f4f9ff; transform: translateX(2px); }
+    .q-col.B .opt:hover:not(:disabled) { border-color: #0f766e; background: #f0faf7; }
+    .q-col.C .opt:hover:not(:disabled) { border-color: #b45309; background: #fffaf0; }
+    .opt.correct { background: #eafaf1; border-color: #16a34a; color: #14603c; }
+    .opt.correct .opt-letter { background: #16a34a; color: #fff; }
+    .opt.correct::after { content: '\2713'; margin-left: auto; color: #16a34a; font-weight: 800; font-size: 15px; }
+    .opt.wrong {
+        background: #fdeaea; border-color: #dc2626; color: #8f2f2f;
+        animation: shake 0.55s ease-in-out;
+    }
+    .opt.wrong .opt-letter { background: #dc2626; color: #fff; }
+    .opt.wrong::after { content: '\2717'; margin-left: auto; color: #dc2626; font-weight: 800; font-size: 15px; }
+    .opt:disabled { cursor: default; }
+    .opt:disabled:not(.correct):not(.wrong) { opacity: 0.65; }
+    @keyframes shake {
+        10%, 90% { transform: translateX(-2px); }
+        20%, 80% { transform: translateX(3px); }
+        30%, 50%, 70% { transform: translateX(-5px); }
+        40%, 60% { transform: translateX(5px); }
+    }
+    .feedback {
+        margin-top: 9px; font-size: 12.5px; font-weight: 700;
+        line-height: 1.4; padding: 8px 12px; border-radius: 9px;
+        display: none;
+    }
+    .feedback.success {
+        display: block; background: #eafaf1; color: #14603c;
+        border-left: 3px solid #16a34a;
+    }
+    .feedback.live {
+        display: block; background: #fff4e0; color: #92400e;
+        border-left: 3px solid #f59e0b;
+    }
+    .teamwork-banner {
+        margin-top: 16px;
+        background: linear-gradient(135deg, #16a34a, #0d9488);
+        border-radius: 16px; padding: 16px 20px; color: #fff;
+        display: none; align-items: center; gap: 14px;
+        box-shadow: 0 12px 28px rgba(13, 148, 136, 0.28);
+        animation: popIn 0.5s ease-out;
+    }
+    .teamwork-banner.show { display: flex; }
+    .teamwork-banner i { font-size: 26px; flex-shrink: 0; }
+    .teamwork-banner strong { display: block; font-size: 15px; margin-bottom: 2px; }
+    .teamwork-banner span { font-size: 12.5px; opacity: 0.95; font-weight: 500; }
+
+    /* ---------- STEP NAV ---------- */
+    .step-nav {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 14px; flex-wrap: wrap;
+        background: #ffffff; border: 1px solid #e6eef6; border-radius: 20px;
+        padding: 12px 16px;
+        box-shadow: 0 10px 26px rgba(20, 45, 80, 0.08);
+        margin-top: 22px;
+        position: sticky; bottom: 14px; z-index: 100;
+    }
+    .step-nav-btn {
+        border: none; border-radius: 40px; padding: 11px 22px;
+        font-family: inherit; font-size: 14px; font-weight: 700;
+        cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+        transition: all 0.18s; background: #eef3f9; color: #3d5a75;
+    }
+    .step-nav-btn:hover:not(:disabled) { background: #dbe7f1; }
+    .step-nav-btn.primary {
+        background: linear-gradient(135deg, #1d4ed8, #16389b);
+        color: #fff; box-shadow: 0 8px 20px rgba(29, 78, 216, 0.3);
+    }
+    .step-nav-btn.primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(29, 78, 216, 0.38); }
+    .step-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; box-shadow: none; }
+    .step-dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+    .step-dot {
+        width: 26px; height: 26px; border-radius: 50%;
+        border: 2px solid #dbe7f1; background: #ffffff;
+        color: #6b8299; font-size: 10.5px; font-weight: 800;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        transition: all 0.18s; padding: 0; font-family: inherit;
+    }
+    .step-dot:hover { border-color: #1d4ed8; color: #1d4ed8; }
+    .step-dot.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; width: 32px; border-radius: 15px; }
+
+    /* ---------- TOAST ---------- */
+    .toast {
+        position: fixed; bottom: 88px; left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: #1d4ed8; color: #fff;
+        padding: 12px 22px; border-radius: 40px;
+        font-family: inherit; font-size: 13.5px; font-weight: 700;
+        box-shadow: 0 12px 30px rgba(29, 78, 216, 0.35);
+        opacity: 0; transition: all 0.3s; z-index: 1000;
+        pointer-events: none; max-width: 90vw;
+        text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #16a34a; }
+    .toast.gold { background: linear-gradient(135deg, #d97706, #b45309); }
+
+    .footer-note {
+        margin-top: 24px; font-size: 12px; line-height: 1.6;
+        color: #8098ad; text-align: center; font-weight: 500;
+    }
+
+    /* ---------- RESPONSIVE ---------- */
+    @media (max-width: 900px) {
+        .q-columns[data-count] { grid-template-columns: 1fr; }
+        .arena { grid-template-columns: 1fr; }
+        .vs-circle { margin: -6px auto; }
+        .side { flex-direction: row; text-align: left; align-items: center; }
+        .side > div:last-child { display: flex; flex-direction: column; align-items: flex-start; }
+        .side-desc { max-width: none; }
+    }
+    @media (max-width: 640px) {
+        body { padding: 14px 10px 100px; }
+        .join-screen { padding: 26px 20px 22px; margin-top: 20px; }
+        .section-head { padding: 16px 18px 14px; }
+        .section-body { padding: 18px 16px 20px; }
+        .sec-title { font-size: 17.5px; }
+        .theme-q p { font-size: 15px; }
+        .proscons { grid-template-columns: 1fr; }
+        .topbar { padding: 10px 12px; position: static; }
+        .room-chip, .me-chip { font-size: 12px; }
+        .audio-row { padding: 10px 12px; }
+        .audio-row audio { min-width: 0; width: 100%; }
+        .side { flex-direction: column; text-align: center; align-items: center; }
+        .side > div:last-child { align-items: center; }
+        .side-icon-circle { width: 76px; height: 76px; font-size: 32px; }
+        .step-nav { padding: 10px 12px; }
+        .step-nav-btn { padding: 9px 16px; font-size: 12.5px; }
+        .step-dot { width: 24px; height: 24px; font-size: 10px; }
+        .step-dot.active { width: 28px; }
+        .progress-bar { flex-direction: column; align-items: stretch; }
+        .prog-item { justify-content: center; }
+        .location-banner { padding: 12px 16px; }
+        .loc-info { font-size: 12.5px; }
+        .loc-team-score { font-size: 12px; padding: 6px 13px; }
+        .loc-guide-btn { width: 100%; justify-content: center; }
+        .auth-panel { padding: 13px 16px; }
+        .auth-panel.go strong { font-size: 15px; }
+        .auth-btn { margin-left: 0; width: 100%; justify-content: center; margin-top: 8px; }
+    }
+</style>
 </head>
 <body>
 
-    <!-- ============================================================ -->
-    <!-- SCREEN 1: LANDING / SETUP                                     -->
-    <!-- ============================================================ -->
-    <div id="screen-landing" class="min-h-screen flex items-center justify-center p-4">
-        <div class="w-full max-w-lg glass rounded-3xl p-8 md:p-10 glow-indigo fade-up">
-            <div class="text-center mb-8">
-                <div class="text-5xl mb-3">🎧</div>
-                <h1 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Listening Lab</h1>
-                <p class="text-indigo-300 font-medium text-sm tracking-widest uppercase mt-1">Mission Control</p>
-                <div class="h-1 w-16 bg-indigo-500/40 rounded-full mx-auto mt-3"></div>
-                <p class="text-slate-400 text-sm mt-4 max-w-xs mx-auto">
-                    Complete 3 missions to earn your badge. Listen, answer, and conquer.
-                </p>
-            </div>
-
-            <form id="form-setup" class="space-y-5">
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-1.5">Your Agent Name</label>
-                    <input type="text" id="input-name" required placeholder="Enter your full name..." class="input-game">
-                </div>
-                <button type="submit" class="btn-primary w-full text-base flex items-center justify-center gap-2">
-                    <span>🚀</span> Start Mission
-                </button>
-            </form>
-
-            <div class="mt-6 text-center">
-                <button onclick="showTeacherPanel()" class="text-xs text-slate-500 hover:text-slate-300 transition underline-offset-2 hover:underline">
-                    ⚙️ Teacher Panel
-                </button>
-            </div>
+<!-- ============================================================
+     JOIN SCREEN
+     ============================================================ -->
+<div class="join-screen" id="joinScreen">
+    <div class="join-brand">
+        <div class="join-logo"><i class="fas fa-comments"></i></div>
+        <div>
+            <h1>Two Futures <span>· Team Activity</span></h1>
+            <p>4 choices · 2 listening tasks · play together</p>
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- SCREEN 2: DASHBOARD                                          -->
-    <!-- ============================================================ -->
-    <div id="screen-dashboard" class="min-h-screen p-4 md:p-6 hidden-screen">
-        <div class="max-w-5xl mx-auto">
-
-            <!-- Header -->
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-white">🎧 Listening Lab</h1>
-                    <p class="text-slate-400 text-sm" id="dash-welcome">Welcome, <span class="text-indigo-300 font-medium" id="dash-name">Agent</span></p>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="glass-light px-4 py-2 rounded-full text-sm">
-                        <span class="text-slate-400">Points</span>
-                        <span class="text-amber-400 font-bold ml-1" id="dash-points">0</span>
-                    </div>
-                    <button onclick="showTeacherPanel()" class="btn-ghost text-xs">⚙️</button>
-                </div>
-            </div>
-
-            <!-- Progress Overview -->
-            <div class="glass rounded-2xl p-5 mb-6">
-                <div class="flex items-center justify-between flex-wrap gap-2">
-                    <span class="text-sm font-medium text-slate-300">Overall Progress</span>
-                    <span class="text-sm text-slate-400" id="dash-progress-text">0 / 3 missions</span>
-                </div>
-                <div class="h-2 bg-white/10 rounded-full mt-2 overflow-hidden">
-                    <div id="dash-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-700" style="width:0%"></div>
-                </div>
-            </div>
-
-            <!-- Mission Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mission-card-grid" id="mission-cards">
-                <!-- Mission A -->
-                <div class="mission-card glass rounded-2xl p-5 available" data-mission="a" id="card-a">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <span class="text-xs font-bold uppercase tracking-wider text-indigo-400">Mission 1</span>
-                            <h3 class="text-lg font-bold text-white mt-0.5">Earnings Call</h3>
-                            <p class="text-xs text-slate-400 mt-1">Fill in the missing numbers</p>
-                        </div>
-                        <div class="text-2xl" id="card-a-stars">☆☆☆</div>
-                    </div>
-                    <div class="mt-3 flex items-center justify-between">
-                        <span class="text-xs text-slate-500" id="card-a-status">🔓 Available</span>
-                        <span class="text-xs text-slate-500" id="card-a-score">0 pts</span>
-                    </div>
-                    <button onclick="launchMission('a')" class="mt-3 w-full py-2 bg-indigo-600/30 hover:bg-indigo-600/50 rounded-xl text-sm font-medium text-indigo-300 transition border border-indigo-500/20">
-                        ▶ Launch
-                    </button>
-                </div>
-
-                <!-- Mission B -->
-                <div class="mission-card glass rounded-2xl p-5 locked" data-mission="b" id="card-b">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Mission 2</span>
-                            <h3 class="text-lg font-bold text-white/60 mt-0.5">Tone &amp; Diplomacy</h3>
-                            <p class="text-xs text-slate-500 mt-1">Choose the best interpretation</p>
-                        </div>
-                        <div class="text-2xl text-slate-600">☆☆☆</div>
-                    </div>
-                    <div class="mt-3 flex items-center justify-between">
-                        <span class="text-xs text-slate-500" id="card-b-status">🔒 Locked</span>
-                        <span class="text-xs text-slate-500" id="card-b-score">—</span>
-                    </div>
-                    <button disabled class="mt-3 w-full py-2 bg-white/5 rounded-xl text-sm font-medium text-slate-600 cursor-not-allowed border border-white/5">
-                        🔒 Locked
-                    </button>
-                </div>
-
-                <!-- Mission C -->
-                <div class="mission-card glass rounded-2xl p-5 locked" data-mission="c" id="card-c">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Mission 3</span>
-                            <h3 class="text-lg font-bold text-white/60 mt-0.5">Boardroom Debate</h3>
-                            <p class="text-xs text-slate-500 mt-1">Mark arguments &amp; decide winner</p>
-                        </div>
-                        <div class="text-2xl text-slate-600">☆☆☆</div>
-                    </div>
-                    <div class="mt-3 flex items-center justify-between">
-                        <span class="text-xs text-slate-500" id="card-c-status">🔒 Locked</span>
-                        <span class="text-xs text-slate-500" id="card-c-score">—</span>
-                    </div>
-                    <button disabled class="mt-3 w-full py-2 bg-white/5 rounded-xl text-sm font-medium text-slate-600 cursor-not-allowed border border-white/5">
-                        🔒 Locked
-                    </button>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="mt-8 text-center text-xs text-slate-600">
-                <span>💡 Complete Mission 1 to unlock Mission 2, then Mission 3.</span>
-            </div>
-        </div>
+    <div class="room-info">
+        <i class="fas fa-users"></i>
+        <span>You are joining room <b id="roomNameDisplay">TEENFUTURES</b></span>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- SCREEN 3: MISSION PLAY                                       -->
-    <!-- ============================================================ -->
-    <div id="screen-mission" class="min-h-screen p-4 md:p-6 hidden-screen">
-        <div class="max-w-4xl mx-auto">
-
-            <!-- Mission Header -->
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div>
-                    <button onclick="goToDashboard()" class="text-slate-400 hover:text-white text-sm transition flex items-center gap-1.5">
-                        ← Back
-                    </button>
-                    <h2 class="text-xl md:text-2xl font-bold text-white mt-1" id="mission-title">Mission</h2>
-                    <p class="text-slate-400 text-sm" id="mission-subtitle">Loading...</p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="glass-light px-3 py-1.5 rounded-full text-sm">
-                        <span class="text-slate-400">Score</span>
-                        <span class="text-amber-400 font-bold ml-1" id="mission-score">0</span>
-                    </div>
-                    <div class="text-2xl" id="mission-stars-display">☆☆☆</div>
-                </div>
-            </div>
-
-            <!-- Step Indicator -->
-            <div class="flex items-center gap-2 mb-5">
-                <div class="step-dot active" id="step-dot-1"></div>
-                <div class="h-0.5 w-8 bg-white/10" id="step-line-1"></div>
-                <div class="step-dot" id="step-dot-2"></div>
-                <div class="h-0.5 w-8 bg-white/10" id="step-line-2"></div>
-                <div class="step-dot" id="step-dot-3"></div>
-                <span class="text-xs text-slate-500 ml-2" id="step-label">Step 1: Listen</span>
-            </div>
-
-            <!-- Audio Section -->
-            <div class="glass rounded-2xl p-5 md:p-6 mb-5">
-                <div class="flex flex-col md:flex-row items-center gap-4">
-                    <div class="flex-1 w-full">
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="text-sm font-medium text-slate-300">🎵 Audio</span>
-                            <span class="text-xs text-slate-500" id="audio-status">Ready</span>
-                        </div>
-                        <div id="audio-player-container" class="w-full"></div>
-                    </div>
-                    <button id="mission-play-btn" class="btn-primary flex-shrink-0 px-6 py-3 text-base flex items-center gap-2">
-                        <span>▶</span> Play
-                    </button>
-                </div>
-                <div class="mt-3 text-xs text-slate-500 flex items-center gap-2">
-                    <span>💡</span> Listen carefully, then answer the questions below.
-                </div>
-            </div>
-
-            <!-- Questions Section -->
-            <div class="glass rounded-2xl p-5 md:p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-semibold text-white">📝 Questions</h3>
-                    <span class="text-xs text-slate-500" id="question-counter">0 / 0</span>
-                </div>
-                <div id="mission-questions" class="space-y-4"></div>
-
-                <div class="mt-6 flex flex-wrap gap-3">
-                    <button id="mission-check-btn" class="btn-success flex items-center gap-2">
-                        <span>✅</span> Check Answers
-                    </button>
-                    <button id="mission-reset-btn" class="btn-ghost text-sm">
-                        🔄 Reset
-                    </button>
-                </div>
-
-                <div id="mission-feedback" class="mt-4 text-sm font-medium"></div>
-            </div>
-
-        </div>
+    <div class="field">
+        <label for="nameInput">Your name</label>
+        <input id="nameInput" type="text" maxlength="24" placeholder="Type your name here" autocomplete="off" />
     </div>
 
-    <!-- ============================================================ -->
-    <!-- SCREEN 4: TEACHER PANEL                                      -->
-    <!-- ============================================================ -->
-    <div id="screen-teacher" class="min-h-screen p-4 md:p-6 hidden-screen">
-        <div class="max-w-5xl mx-auto">
+    <button type="button" class="join-btn" id="joinBtn">
+        <i class="fas fa-arrow-right-to-bracket"></i> Join the room
+    </button>
 
-            <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-white">⚙️ Teacher Panel</h1>
-                    <p class="text-slate-400 text-sm">Configure missions, upload audio, and generate questions with AI.</p>
-                </div>
-                <button onclick="goToDashboard()" class="btn-ghost text-sm">← Back</button>
-            </div>
-
-            <!-- Tabs for A, B, C -->
-            <div class="flex gap-2 mb-5 flex-wrap">
-                <button class="teacher-tab px-5 py-2 rounded-xl text-sm font-medium bg-indigo-600/30 text-white border border-indigo-500/30" data-tab="tabA">A · Earnings</button>
-                <button class="teacher-tab px-5 py-2 rounded-xl text-sm font-medium bg-white/5 text-slate-400 border border-white/5" data-tab="tabB">B · Tone</button>
-                <button class="teacher-tab px-5 py-2 rounded-xl text-sm font-medium bg-white/5 text-slate-400 border border-white/5" data-tab="tabC">C · Boardroom</button>
-            </div>
-
-            <!-- Tab A -->
-            <div id="tabA" class="teacher-tab-content glass rounded-2xl p-5 space-y-4">
-                <h3 class="font-bold text-indigo-400 text-lg">📊 Mission A — Earnings Call</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio File (MP3)</label>
-                        <input type="text" id="teacher-a-file" class="teacher-input" placeholder="/audio/a.mp3 or https://..." value="https://www.w3schools.com/html/horse.mp3">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio URL (iframe fallback)</label>
-                        <input type="text" id="teacher-a-url" class="teacher-input" placeholder="https://whyp.it/embeds/..." value="">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Transcript / Summary</label>
-                    <textarea id="teacher-a-summary" rows="5" class="teacher-textarea" placeholder="Paste the transcript here to generate questions..."></textarea>
-                </div>
-                <div class="flex flex-wrap gap-3 items-center">
-                    <button id="teacher-a-generate" class="btn-primary text-sm py-2 px-5">🤖 Generate Questions</button>
-                    <span id="teacher-a-status" class="text-xs text-slate-500"></span>
-                </div>
-                <div id="teacher-a-preview" class="hidden-screen space-y-3 border-t border-white/10 pt-4">
-                    <label class="block text-xs font-medium text-slate-400">Generated Questions (JSON)</label>
-                    <textarea id="teacher-a-questions" rows="8" class="teacher-textarea font-mono text-xs"></textarea>
-                    <button id="teacher-a-save" class="btn-success text-sm py-2 px-5">💾 Save to Firebase</button>
-                </div>
-            </div>
-
-            <!-- Tab B -->
-            <div id="tabB" class="teacher-tab-content glass rounded-2xl p-5 space-y-4 hidden-screen">
-                <h3 class="font-bold text-indigo-400 text-lg">🎭 Mission B — Tone &amp; Diplomacy</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio File (MP3)</label>
-                        <input type="text" id="teacher-b-file" class="teacher-input" placeholder="/audio/b.mp3" value="https://www.w3schools.com/html/horse.mp3">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio URL (iframe fallback)</label>
-                        <input type="text" id="teacher-b-url" class="teacher-input" placeholder="https://whyp.it/embeds/..." value="">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Transcript / Summary</label>
-                    <textarea id="teacher-b-summary" rows="5" class="teacher-textarea" placeholder="Paste the transcript here..."></textarea>
-                </div>
-                <div class="flex flex-wrap gap-3 items-center">
-                    <button id="teacher-b-generate" class="btn-primary text-sm py-2 px-5">🤖 Generate Questions</button>
-                    <span id="teacher-b-status" class="text-xs text-slate-500"></span>
-                </div>
-                <div id="teacher-b-preview" class="hidden-screen space-y-3 border-t border-white/10 pt-4">
-                    <label class="block text-xs font-medium text-slate-400">Generated Questions (JSON)</label>
-                    <textarea id="teacher-b-questions" rows="8" class="teacher-textarea font-mono text-xs"></textarea>
-                    <button id="teacher-b-save" class="btn-success text-sm py-2 px-5">💾 Save to Firebase</button>
-                </div>
-            </div>
-
-            <!-- Tab C -->
-            <div id="tabC" class="teacher-tab-content glass rounded-2xl p-5 space-y-4 hidden-screen">
-                <h3 class="font-bold text-indigo-400 text-lg">⚔️ Mission C — Boardroom Debate</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio File (MP3)</label>
-                        <input type="text" id="teacher-c-file" class="teacher-input" placeholder="/audio/c.mp3" value="https://www.w3schools.com/html/horse.mp3">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">Audio URL (iframe fallback)</label>
-                        <input type="text" id="teacher-c-url" class="teacher-input" placeholder="https://whyp.it/embeds/..." value="">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Transcript / Summary</label>
-                    <textarea id="teacher-c-summary" rows="5" class="teacher-textarea" placeholder="Paste the transcript here..."></textarea>
-                </div>
-                <div class="flex flex-wrap gap-3 items-center">
-                    <button id="teacher-c-generate" class="btn-primary text-sm py-2 px-5">🤖 Generate Questions</button>
-                    <span id="teacher-c-status" class="text-xs text-slate-500"></span>
-                </div>
-                <div id="teacher-c-preview" class="hidden-screen space-y-3 border-t border-white/10 pt-4">
-                    <label class="block text-xs font-medium text-slate-400">Generated Questions (JSON)</label>
-                    <textarea id="teacher-c-questions" rows="8" class="teacher-textarea font-mono text-xs"></textarea>
-                    <button id="teacher-c-save" class="btn-success text-sm py-2 px-5">💾 Save to Firebase</button>
-                </div>
-            </div>
-
-            <div class="mt-6 text-xs text-slate-500 glass rounded-xl p-4">
-                <p>📡 Data saved under <code class="text-indigo-300">/activities</code> in Firebase. Students see updates live.</p>
-                <p class="mt-1">🔑 Groq API key is hardcoded for demo. Replace <code class="text-indigo-300">GROQ_API_KEY</code> in the script.</p>
-            </div>
-        </div>
+    <div class="join-error hidden" id="joinError">
+        <i class="fas fa-circle-exclamation"></i>
+        <span id="joinErrorText"></span>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MODAL: RESULTS                                               -->
-    <!-- ============================================================ -->
-    <div id="modal-container" class="fixed inset-0 modal-overlay flex items-center justify-center p-4 hidden-screen z-50">
-        <div class="glass rounded-3xl p-6 md:p-8 max-w-lg w-full glow-indigo fade-up">
-            <div class="text-center">
-                <div id="modal-stars" class="text-5xl mb-2">☆☆☆</div>
-                <h3 id="modal-title" class="text-2xl font-bold text-white">Mission Complete!</h3>
-                <p id="modal-subtitle" class="text-slate-400 text-sm mt-1">Great work, agent.</p>
-            </div>
-            <div class="my-5 p-4 glass-light rounded-2xl">
-                <div class="flex justify-between text-sm">
-                    <span class="text-slate-400">Points Earned</span>
-                    <span class="text-amber-400 font-bold" id="modal-points">0</span>
-                </div>
-                <div class="flex justify-between text-sm mt-2">
-                    <span class="text-slate-400">Accuracy</span>
-                    <span class="text-emerald-400 font-bold" id="modal-accuracy">0%</span>
-                </div>
-            </div>
-            <div class="flex flex-col sm:flex-row gap-3">
-                <button id="modal-next-btn" class="btn-primary flex-1 flex items-center justify-center gap-2">
-                    <span>→</span> Next Mission
-                </button>
-                <button onclick="closeModal()" class="btn-ghost flex-1">Dashboard</button>
-            </div>
+    <p class="join-hint">
+        Everyone on this page is in the same room. The system will assign you Player A, B, or C automatically.
+    </p>
+</div>
+
+<!-- ============================================================
+     MAIN APP
+     ============================================================ -->
+<div class="app hidden" id="mainApp">
+
+    <div class="topbar">
+        <div class="room-chip">
+            <i class="fas fa-users"></i>
+            <span>Room</span>
+            <b id="roomCodeDisplay">—</b>
         </div>
+        <div class="me-chip A" id="meChip">
+            <span class="me-dot" id="meInitial">?</span>
+            <b id="meName">—</b>
+            <span id="meRole">Player A</span>
+        </div>
+        <button type="button" class="reset-answers-btn hidden" id="resetAnswersBtn">
+            <i class="fas fa-eraser"></i> Reset answers
+        </button>
+        <button class="leave-btn" id="leaveBtn">
+            <i class="fas fa-right-from-bracket"></i> Leave
+        </button>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- JAVASCRIPT                                                   -->
-    <!-- ============================================================ -->
-    <script>
-        // =============================================================
-        // FIREBASE CONFIG
-        // =============================================================
-        const firebaseConfig = {
-            databaseURL: "https://english-meetings-f08e4-default-rtdb.firebaseio.com/"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+    <div class="location-banner">
+        <div class="loc-info">
+            <i class="fas fa-location-dot"></i>
+            <span class="loc-step-num" id="locStepNum">1 / 6</span>
+            <span class="loc-step-title" id="locStepTitle">—</span>
+        </div>
+        <div class="loc-team-score">
+            <i class="fas fa-trophy"></i>
+            <span>Team</span>
+            <b id="teamScoreVal">0</b>
+            <span>pts</span>
+        </div>
+        <button type="button" class="loc-guide-btn hidden" id="guideBtn">
+            <i class="fas fa-paper-plane"></i> Send class here
+        </button>
+    </div>
 
-        // =============================================================
-        // GROQ API
-        // =============================================================
-        const GROQ_API_KEY = "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";
-        const GROQ_MODEL = "openai/gpt-oss-120b";
+    <div id="sections"></div>
 
-        // =============================================================
-        // GAME STATE
-        // =============================================================
-        const G = {
-            player: { id: null, name: '' },
-            missions: {
-                a: { unlocked: true, completed: false, stars: 0, points: 0 },
-                b: { unlocked: false, completed: false, stars: 0, points: 0 },
-                c: { unlocked: false, completed: false, stars: 0, points: 0 }
-            },
-            currentMission: null, // 'a' | 'b' | 'c'
-            activitiesData: { a: null, b: null, c: null },
-            totalPoints: 0,
-            answeredCorrectly: 0,
-            totalQuestions: 0
-        };
+    <nav class="step-nav">
+        <button class="step-nav-btn" id="prevStep">
+            <i class="fas fa-arrow-left"></i> Previous
+        </button>
+        <div class="step-dots" id="stepDots"></div>
+        <button class="step-nav-btn primary" id="nextStep">
+            Next <i class="fas fa-arrow-right"></i>
+        </button>
+    </nav>
 
-        // =============================================================
-        // DOM REFS
-        // =============================================================
-        const $ = id => document.getElementById(id);
-        const $$ = sel => document.querySelectorAll(sel);
+    <p class="footer-note">
+        All situations here are imaginary and are used only to practise English.
+    </p>
+</div>
 
-        // =============================================================
-        // SCREEN MANAGEMENT
-        // =============================================================
-        function showScreen(id) {
-            document.querySelectorAll('[id^="screen-"]').forEach(el => el.classList.add('hidden-screen'));
-            const el = $(id);
-            if (el) el.classList.remove('hidden-screen');
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+(function () {
+    'use strict';
+
+    /* ================================================================
+       CONSTANTS
+       ================================================================ */
+    const FIREBASE_URL = 'https://english-meetings-f08e4-default-rtdb.firebaseio.com';
+    const FIXED_ROOM = 'TEENFUTURES';
+    const GHOST_NAMES = ['andre prof', 'prof andre', 'andre professor', 'professor andre', 'prof. andre', 'andre prof.'];
+    const CLIENT_ID = 'c_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    const STORAGE_KEY = 'two-futures-teen-v1';
+    const ROLES = ['A', 'B', 'C'];
+
+    const OWNER_2P = { 1: 'A', 2: 'B', 3: 'A', 4: 'B', 5: 'A', 6: 'B' };
+    const OWNER_3P = { 1: 'A', 2: 'B', 3: 'C', 4: 'A', 5: 'B', 6: 'C' };
+
+    function getMode(presentRoles) {
+        if (presentRoles.length >= 3) return 'three';
+        if (presentRoles.length === 1) return 'one';
+        return 'two';
+    }
+    function ownerOfQ(n, mode) {
+        if (mode === 'three') return OWNER_3P[n];
+        if (mode === 'one') {
+            const present = presentRolesOf(state);
+            return present[0] || 'A';
         }
+        return OWNER_2P[n];
+    }
+    function rolesForMode(mode) {
+        if (mode === 'three') return ['A', 'B', 'C'];
+        if (mode === 'one') {
+            const present = presentRolesOf(state);
+            return present.length ? [present[0]] : ['A'];
+        }
+        return ['A', 'B'];
+    }
 
-        // =============================================================
-        // LANDING
-        // =============================================================
-        $('form-setup').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = $('input-name').value.trim();
-            if (!name) return;
-            G.player.id = 'user_' + Math.random().toString(36).substr(2, 9);
-            G.player.name = name;
-            db.ref(`students/${G.player.id}`).set({ id: G.player.id, name });
-            loadGameState();
-            showScreen('screen-dashboard');
-            renderDashboard();
-        });
+    /* ================================================================
+       DATA — 4 A1–A2 teen themes
+       ================================================================ */
+    const THEMES = [
+        {
+            id: 'theme1',
+            title: 'School uniform vs Free clothes',
+            question: 'Which is better for students? Why? Tell your partner one good thing and one bad thing about each.',
+            sideA: { label: 'Choice A', name: 'School uniform', desc: 'Everyone wears the same clothes at school.', color: '#1d4ed8', tint: '#eaf1ff', icon: 'fa-user-tie' },
+            sideB: { label: 'Choice B', name: 'Free clothes', desc: 'Students choose what to wear every day.', color: '#0f766e', tint: '#e3f5f2', icon: 'fa-shirt' },
+            chips: ['comfortable', 'expensive', 'cool', 'boring', 'my style', 'easy'],
+            prosPrompt: 'One good thing about this choice',
+            consPrompt: 'One bad thing about this choice'
+        },
+        {
+            id: 'theme2',
+            title: 'Video games vs Sport',
+            question: 'Which is better for your free time? Why? Tell your partner one good thing and one bad thing about each.',
+            sideA: { label: 'Choice A', name: 'Video games', desc: 'Playing games with friends online or at home.', color: '#1d4ed8', tint: '#eaf1ff', icon: 'fa-gamepad' },
+            sideB: { label: 'Choice B', name: 'Sport', desc: 'Playing football, basketball, or going to the gym.', color: '#0f766e', tint: '#e3f5f2', icon: 'fa-futbol' },
+            chips: ['fun', 'healthy', 'friends', 'alone', 'team', 'tiring'],
+            prosPrompt: 'One good thing about this choice',
+            consPrompt: 'One bad thing about this choice'
+        },
+        {
+            id: 'theme3',
+            title: 'TikTok vs YouTube',
+            question: 'Which is better for teenagers? Why? Tell your partner one good thing and one bad thing about each.',
+            sideA: { label: 'Choice A', name: 'TikTok', desc: 'Short videos, music, and quick fun.', color: '#1d4ed8', tint: '#eaf1ff', icon: 'fa-music' },
+            sideB: { label: 'Choice B', name: 'YouTube', desc: 'Long videos — tutorials, vlogs, and more.', color: '#0f766e', tint: '#e3f5f2', icon: 'fa-circle-play' },
+            chips: ['funny', 'useful', 'learn', 'waste time', 'long', 'short'],
+            prosPrompt: 'One good thing about this choice',
+            consPrompt: 'One bad thing about this choice'
+        },
+        {
+            id: 'theme4',
+            title: 'YouTuber vs Doctor or Engineer',
+            question: 'Which is a better future job? Why? Tell your partner one good thing and one bad thing about each.',
+            sideA: { label: 'Choice A', name: 'Famous YouTuber', desc: 'Making videos for millions of people.', color: '#1d4ed8', tint: '#eaf1ff', icon: 'fa-star' },
+            sideB: { label: 'Choice B', name: 'Doctor or Engineer', desc: 'A job with study, exams, and steady work.', color: '#0f766e', tint: '#e3f5f2', icon: 'fa-stethoscope' },
+            chips: ['money', 'fame', 'help people', 'stress', 'safe', 'risky'],
+            prosPrompt: 'One good thing about this choice',
+            consPrompt: 'One bad thing about this choice'
+        }
+    ];
 
-        // =============================================================
-        // LOAD / SAVE GAME STATE
-        // =============================================================
-        function loadGameState() {
-            db.ref('activities').on('value', (snap) => {
-                const data = snap.val() || {};
-                G.activitiesData = data;
-                if (G.currentMission) renderMission(G.currentMission);
-                renderDashboard();
-            });
+    /* ================================================================
+       DATA — 2 A1–A2 listenings (teen speakers)
+       ================================================================ */
+    const LISTENINGS = [
+        {
+            id: 'listening1', variant: 'listen1',
+            title: 'Listening 1 · Lucas — my school day',
+            audio: 'https://files.catbox.moe/wd1mfp.mp3',
+            intro: 'Listen to Lucas. He is sixteen. Then choose the correct answer.',
+            questions: [
+                { id: 'l1q1', num: 1, text: 'How old is Lucas?',
+                  options: [
+                      { k: 'a', text: 'Fourteen' },
+                      { k: 'b', text: 'Sixteen' },
+                      { k: 'c', text: 'Eighteen' }
+                  ], correct: 'b', explain: 'he says: "I\'m sixteen"' },
+                { id: 'l1q2', num: 2, text: 'What time does his school start?',
+                  options: [
+                      { k: 'a', text: 'Seven thirty' },
+                      { k: 'b', text: 'Eight o\'clock' },
+                      { k: 'c', text: 'Seven o\'clock' }
+                  ], correct: 'a', explain: 'his school starts at seven thirty' },
+                { id: 'l1q3', num: 3, text: 'What is his favourite subject?',
+                  options: [
+                      { k: 'a', text: 'Math' },
+                      { k: 'b', text: 'History' },
+                      { k: 'c', text: 'English' }
+                  ], correct: 'b', explain: 'his favourite subject is history' },
+                { id: 'l1q4', num: 4, text: 'Why does he not like math?',
+                  options: [
+                      { k: 'a', text: 'It is too difficult' },
+                      { k: 'b', text: 'It is boring' },
+                      { k: 'c', text: 'The teacher is strict' }
+                  ], correct: 'a', explain: 'he says math is too difficult for him' },
+                { id: 'l1q5', num: 5, text: 'What do he and his friends talk about at lunch?',
+                  options: [
+                      { k: 'a', text: 'Sports' },
+                      { k: 'b', text: 'School subjects' },
+                      { k: 'c', text: 'Games and music' }
+                  ], correct: 'c', explain: 'they talk about games and music' },
+                { id: 'l1q6', num: 6, text: 'When does he have soccer practice?',
+                  options: [
+                      { k: 'a', text: 'Mondays and Wednesdays' },
+                      { k: 'b', text: 'Tuesdays and Thursdays' },
+                      { k: 'c', text: 'Fridays' }
+                  ], correct: 'b', explain: 'he has soccer practice on Tuesdays and Thursdays' }
+            ]
+        },
+        {
+            id: 'listening2', variant: 'listen2',
+            title: 'Listening 2 · Sofia — my weekend',
+            audio: 'https://files.catbox.moe/4j5ode.mp3',
+            intro: 'Listen to Sofia. She is fifteen. Then choose the correct answer.',
+            questions: [
+                { id: 'l2q1', num: 1, text: 'How old is Sofia?',
+                  options: [
+                      { k: 'a', text: 'Fifteen' },
+                      { k: 'b', text: 'Thirteen' },
+                      { k: 'c', text: 'Seventeen' }
+                  ], correct: 'a', explain: 'she says: "I\'m fifteen"' },
+                { id: 'l2q2', num: 2, text: 'What time does she wake up on Saturday?',
+                  options: [
+                      { k: 'a', text: 'Eight or nine' },
+                      { k: 'b', text: 'Ten or eleven' },
+                      { k: 'c', text: 'Twelve' }
+                  ], correct: 'b', explain: 'she sleeps until ten or eleven' },
+                { id: 'l2q3', num: 3, text: 'Where does she go in the afternoon?',
+                  options: [
+                      { k: 'a', text: 'To the mall' },
+                      { k: 'b', text: 'To the park' },
+                      { k: 'c', text: 'To her friend\'s house' }
+                  ], correct: 'c', explain: 'she goes to her friend\'s house' },
+                { id: 'l2q4', num: 4, text: 'Where does her family go on Sunday?',
+                  options: [
+                      { k: 'a', text: 'To her grandmother\'s house' },
+                      { k: 'b', text: 'To the beach' },
+                      { k: 'c', text: 'To a restaurant' }
+                  ], correct: 'a', explain: 'they go to her grandmother\'s house' },
+                { id: 'l2q5', num: 5, text: 'What do they eat for lunch?',
+                  options: [
+                      { k: 'a', text: 'Pizza and salad' },
+                      { k: 'b', text: 'Rice, beans, chicken and cake' },
+                      { k: 'c', text: 'Pasta and fish' }
+                  ], correct: 'b', explain: 'they eat rice, beans, chicken and cake' },
+                { id: 'l2q6', num: 6, text: 'When does she do her homework?',
+                  options: [
+                      { k: 'a', text: 'Friday night' },
+                      { k: 'b', text: 'Sunday evening' },
+                      { k: 'c', text: 'Saturday night' }
+                  ], correct: 'b', explain: 'she does her homework on Sunday evening' }
+            ]
+        }
+    ];
 
-            // Load player progress
-            if (G.player.id) {
-                db.ref(`progress/${G.player.id}`).on('value', (snap) => {
-                    const p = snap.val() || {};
-                    if (p.missions) {
-                        Object.keys(p.missions).forEach(key => {
-                            if (G.missions[key]) {
-                                G.missions[key].completed = p.missions[key].completed || false;
-                                G.missions[key].stars = p.missions[key].stars || 0;
-                                G.missions[key].points = p.missions[key].points || 0;
-                            }
-                        });
-                        G.totalPoints = Object.values(p.missions).reduce((sum, m) => sum + (m.points || 0), 0);
-                        // Unlock logic
-                        if (G.missions.a.completed) G.missions.b.unlocked = true;
-                        if (G.missions.b.completed) G.missions.c.unlocked = true;
-                    }
-                    renderDashboard();
-                    if (G.currentMission) renderMission(G.currentMission);
-                });
+    const ITEMS = [
+        { type: 'theme', data: THEMES[0] },
+        { type: 'listening', data: LISTENINGS[0] },
+        { type: 'theme', data: THEMES[1] },
+        { type: 'listening', data: LISTENINGS[1] },
+        { type: 'theme', data: THEMES[2] },
+        { type: 'theme', data: THEMES[3] }
+    ];
+
+    const ALL_QUESTIONS = {};
+    LISTENINGS.forEach(l => l.questions.forEach(q => { ALL_QUESTIONS[q.id] = q; }));
+
+    function stepLabel(item) {
+        if (item.type === 'theme') return 'Choice · ' + item.data.title;
+        return item.data.title;
+    }
+
+    /* ================================================================
+       STATE
+       ================================================================ */
+    let me = { role: null, name: '', room: FIXED_ROOM, isGhost: false };
+    let state = { players: {}, answers: {}, auth: {}, lastGuide: null };
+    let currentStep = 0;
+    let sectionsEls = [];
+    let lastRolesStr = '';
+    let lastKnownSolved = {};
+    let lastSeenGuidePushId = null;
+    let lastAuthSnapshot = {};
+    let db = null;
+    let firebaseOk = false;
+    let roomRef = null;
+
+    /* ================================================================
+       HELPERS
+       ================================================================ */
+    function $(sel, root) { return (root || document).querySelector(sel); }
+    function $$(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[ch]));
+    }
+    function initials(name) {
+        if (!name) return '?';
+        return name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    }
+    function toast(msg, kind) {
+        const el = document.createElement('div');
+        el.className = 'toast' + (kind ? ' ' + kind : '');
+        el.textContent = msg;
+        document.body.appendChild(el);
+        requestAnimationFrame(() => el.classList.add('show'));
+        setTimeout(() => {
+            el.classList.remove('show');
+            setTimeout(() => el.remove(), 300);
+        }, 3000);
+    }
+    function presentRolesOf(s) { return ROLES.filter(r => s.players && s.players[r]); }
+    function isGhostName(name) {
+        const n = String(name || '').toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        return GHOST_NAMES.indexOf(n) !== -1;
+    }
+    function pointsForAttempt(attempts) {
+        if (attempts === 1) return 3;
+        if (attempts === 2) return 2;
+        return 1;
+    }
+
+    /* ================================================================
+       FIREBASE
+       ================================================================ */
+    function initFirebase() {
+        if (typeof firebase === 'undefined' || !firebase.initializeApp) return;
+        try {
+            firebase.initializeApp({ databaseURL: FIREBASE_URL });
+            db = firebase.database();
+            firebaseOk = true;
+        } catch (e) { console.warn('Firebase init failed:', e); }
+    }
+
+    /* ================================================================
+       JOIN SCREEN
+       ================================================================ */
+    const joinScreen = document.getElementById('joinScreen');
+    const mainApp = document.getElementById('mainApp');
+    const nameInput = document.getElementById('nameInput');
+    const joinBtn = document.getElementById('joinBtn');
+    const joinError = document.getElementById('joinError');
+    const joinErrorText = document.getElementById('joinErrorText');
+
+    document.getElementById('roomNameDisplay').textContent = FIXED_ROOM;
+
+    (function prefill() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                const s = JSON.parse(saved);
+                if (s.name) nameInput.value = s.name;
+            } catch (e) {}
+        }
+    })();
+
+    function showJoinError(msg) { joinErrorText.textContent = msg; joinError.classList.remove('hidden'); }
+    function hideJoinError() { joinError.classList.add('hidden'); }
+
+    joinBtn.addEventListener('click', async () => {
+        const name = (nameInput.value || '').trim();
+        hideJoinError();
+        if (!name) { showJoinError('Please write your name.'); return; }
+
+        me.name = name;
+        me.room = FIXED_ROOM;
+        me.isGhost = isGhostName(name);
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ name })); } catch (e) {}
+
+        joinBtn.disabled = true;
+        joinBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Joining…';
+
+        try {
+            if (me.isGhost) {
+                me.role = 'ghost';
+                finalizeJoin();
+            } else {
+                await claimSlot();
+                finalizeJoin();
             }
+        } catch (err) {
+            console.warn(err);
+            showJoinError(err.message || 'Could not join. Try again.');
+            joinBtn.disabled = false;
+            joinBtn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Join the room';
         }
+    });
 
-        function saveProgress() {
-            if (!G.player.id) return;
-            const data = {
-                missions: {
-                    a: { completed: G.missions.a.completed, stars: G.missions.a.stars, points: G.missions.a.points },
-                    b: { completed: G.missions.b.completed, stars: G.missions.b.stars, points: G.missions.b.points },
-                    c: { completed: G.missions.c.completed, stars: G.missions.c.stars, points: G.missions.c.points }
-                }
-            };
-            db.ref(`progress/${G.player.id}`).set(data);
-        }
-
-        // =============================================================
-        // DASHBOARD
-        // =============================================================
-        function renderDashboard() {
-            $('dash-name').textContent = G.player.name || 'Agent';
-            $('dash-points').textContent = G.totalPoints;
-
-            const total = Object.keys(G.missions).length;
-            const done = Object.values(G.missions).filter(m => m.completed).length;
-            $('dash-progress-text').textContent = `${done} / ${total} missions`;
-            $('dash-progress-bar').style.width = `${(done/total)*100}%`;
-
-            // Cards
-            ['a', 'b', 'c'].forEach(key => {
-                const m = G.missions[key];
-                const card = $(`card-${key}`);
-                const statusEl = $(`card-${key}-status`);
-                const scoreEl = $(`card-${key}-score`);
-                const starsEl = $(`card-${key}-stars`);
-                const btn = card.querySelector('button');
-
-                // Stars
-                const filled = '★'.repeat(m.stars) + '☆'.repeat(3 - m.stars);
-                starsEl.textContent = filled;
-
-                if (m.completed) {
-                    card.className = 'mission-card glass rounded-2xl p-5 completed';
-                    statusEl.textContent = '✅ Completed';
-                    scoreEl.textContent = `${m.points} pts`;
-                    btn.textContent = '🔄 Replay';
-                    btn.disabled = false;
-                    btn.className =
-                    'mt-3 w-full py-2 bg-emerald-600/30 hover:bg-emerald-600/50 rounded-xl text-sm font-medium text-emerald-300 transition border border-emerald-500/20';
-                    btn.onclick = () => { G.currentMission = key;
-                        launchMission(key); };
-                } else if (m.unlocked) {
-                    card.className = 'mission-card glass rounded-2xl p-5 available';
-                    statusEl.textContent = '🔓 Available';
-                    scoreEl.textContent = '0 pts';
-                    btn.textContent = '▶ Launch';
-                    btn.disabled = false;
-                    btn.className =
-                    'mt-3 w-full py-2 bg-indigo-600/30 hover:bg-indigo-600/50 rounded-xl text-sm font-medium text-indigo-300 transition border border-indigo-500/20';
-                    btn.onclick = () => { G.currentMission = key;
-                        launchMission(key); };
-                } else {
-                    card.className = 'mission-card glass rounded-2xl p-5 locked';
-                    statusEl.textContent = '🔒 Locked';
-                    scoreEl.textContent = '—';
-                    btn.textContent = '🔒 Locked';
-                    btn.disabled = true;
-                    btn.className =
-                    'mt-3 w-full py-2 bg-white/5 rounded-xl text-sm font-medium text-slate-600 cursor-not-allowed border border-white/5';
-                    btn.onclick = null;
-                }
-            });
-        }
-
-        // =============================================================
-        // LAUNCH MISSION
-        // =============================================================
-        function launchMission(key) {
-            G.currentMission = key;
-            showScreen('screen-mission');
-            renderMission(key);
-        }
-
-        function goToDashboard() {
-            G.currentMission = null;
-            showScreen('screen-dashboard');
-            renderDashboard();
-        }
-
-        // =============================================================
-        // RENDER MISSION
-        // =============================================================
-        function renderMission(key) {
-            const data = G.activitiesData[key];
-            if (!data) {
-                $('mission-title').textContent = 'Mission ' + key.toUpperCase();
-                $('mission-subtitle').textContent = 'No content loaded yet.';
-                $('mission-questions').innerHTML =
-                    '<p class="text-slate-400 text-sm">⚠️ Teacher hasn\'t configured this mission yet.</p>';
+    function claimSlot() {
+        return new Promise((resolve, reject) => {
+            if (!firebaseOk) {
+                me.role = 'A';
+                state.players = { A: { name: me.name } };
+                resolve();
                 return;
             }
-
-            const names = { a: 'Earnings Call', b: 'Tone & Diplomacy', c: 'Boardroom Debate' };
-            const subs = { a: 'Fill in the missing numbers', b: 'Choose the best interpretation',
-            c: 'Mark arguments & decide winner' };
-            $('mission-title').textContent = `Mission ${key.toUpperCase()} · ${names[key]}`;
-            $('mission-subtitle').textContent = subs[key];
-
-            // Score
-            const m = G.missions[key];
-            $('mission-score').textContent = m.points || 0;
-            const filled = '★'.repeat(m.stars) + '☆'.repeat(3 - m.stars);
-            $('mission-stars-display').textContent = filled;
-
-            // Steps
-            $('step-dot-1').className = 'step-dot active';
-            $('step-dot-2').className = 'step-dot';
-            $('step-dot-3').className = 'step-dot';
-            $('step-line-1').className = 'h-0.5 w-8 bg-white/10';
-            $('step-line-2').className = 'h-0.5 w-8 bg-white/10';
-            $('step-label').textContent = 'Step 1: Listen';
-
-            // Audio
-            buildAudioPlayer(data, 'audio-player-container', 'mission-play-btn');
-
-            // Questions
-            buildQuestions(key, data);
-
-            // Reset
-            $('mission-reset-btn').onclick = () => {
-                renderMission(key);
-            };
-
-            // Check
-            $('mission-check-btn').onclick = () => {
-                checkMission(key);
-            };
-
-            // Feedback
-            $('mission-feedback').textContent = '';
-            $('mission-feedback').className = 'mt-4 text-sm font-medium';
-        }
-
-        // =============================================================
-        // AUDIO PLAYER
-        // =============================================================
-        function buildAudioPlayer(data, containerId, playBtnId) {
-            const container = $(containerId);
-            const playBtn = $(playBtnId);
-            container.innerHTML = '';
-
-            const mp3Url = data.audioFile || '';
-            const iframeUrl = data.audioUrl || '';
-
-            if (mp3Url) {
-                const audio = document.createElement('audio');
-                audio.controls = true;
-                audio.preload = 'metadata';
-                audio.style.width = '100%';
-                audio.style.borderRadius = '12px';
-                audio.style.background = 'rgba(255,255,255,0.04)';
-                const source = document.createElement('source');
-                source.src = mp3Url;
-                source.type = 'audio/mpeg';
-                audio.appendChild(source);
-                container.appendChild(audio);
-
-                // Wave visual
-                const wave = document.createElement('div');
-                wave.className = 'audio-wave mt-2';
-                wave.innerHTML = Array(16).fill(0).map(() => '<div class="bar"></div>').join('');
-                container.appendChild(wave);
-
-                let isPlaying = false;
-                audio.addEventListener('play', () => { isPlaying = true;
-                    wave.classList.add('playing'); });
-                audio.addEventListener('pause', () => { isPlaying = false;
-                    wave.classList.remove('playing'); });
-                audio.addEventListener('ended', () => { isPlaying = false;
-                    wave.classList.remove('playing'); });
-
-                playBtn.onclick = () => {
-                    if (audio.paused) {
-                        audio.play().catch(() => {});
-                    } else {
-                        audio.pause();
+            const playersRef = db.ref('rooms/' + me.room + '/players');
+            playersRef.transaction(current => {
+                current = current || {};
+                for (const role of ROLES) {
+                    if (current[role] && current[role].clientId === CLIENT_ID) return current;
+                }
+                for (const role of ROLES) {
+                    if (!current[role]) {
+                        current[role] = { name: me.name, clientId: CLIENT_ID, ts: Date.now() };
+                        return current;
                     }
-                };
-                playBtn.innerHTML = '<span>▶</span> Play';
+                }
+                return;
+            }, (err, committed, snapshot) => {
+                if (err) { reject(new Error('Connection error. Please try again.')); return; }
+                if (!committed) { reject(new Error('Room is full (3 players max).')); return; }
+                const finalPlayers = snapshot.val() || {};
+                let myRole = null;
+                for (const role of ROLES) {
+                    if (finalPlayers[role] && finalPlayers[role].clientId === CLIENT_ID) {
+                        myRole = role;
+                        break;
+                    }
+                }
+                if (!myRole) { reject(new Error('Could not claim a slot. Try again.')); return; }
+                me.role = myRole;
+                try {
+                    db.ref('rooms/' + me.room + '/players/' + myRole).onDisconnect().remove();
+                } catch (e) {}
+                resolve();
+            });
+        });
+    }
 
-                audio.addEventListener('play', () => { playBtn.innerHTML = '<span>⏸</span> Pause'; });
-                audio.addEventListener('pause', () => { playBtn.innerHTML = '<span>▶</span> Play'; });
-                audio.addEventListener('ended', () => { playBtn.innerHTML = '<span>▶</span> Play'; });
+    function finalizeJoin() {
+        joinScreen.classList.add('hidden');
+        mainApp.classList.remove('hidden');
 
-                $('audio-status').textContent = '🎵 MP3 loaded';
+        document.getElementById('roomCodeDisplay').textContent = me.room;
+        document.getElementById('meName').textContent = me.name;
+        document.getElementById('meInitial').textContent = me.isGhost ? '👻' : initials(me.name);
+        document.getElementById('meRole').textContent = me.isGhost ? 'Ghost mode' : 'Player ' + me.role;
+        document.getElementById('meChip').className = 'me-chip ' + (me.isGhost ? 'ghost' : me.role);
 
-            } else if (iframeUrl) {
-                const iframe = document.createElement('iframe');
-                iframe.src = iframeUrl;
-                iframe.allow = 'autoplay; encrypted-media';
-                iframe.style.width = '100%';
-                iframe.style.height = '160px';
-                iframe.style.border = 'none';
-                iframe.style.borderRadius = '12px';
-                iframe.style.background = 'rgba(255,255,255,0.04)';
-                container.appendChild(iframe);
-                playBtn.onclick = () => {
-                    const ifr = container.querySelector('iframe');
-                    if (ifr) ifr.src = ifr.src;
-                };
-                playBtn.innerHTML = '<span>🔄</span> Reload';
-                $('audio-status').textContent = '🎵 iframe fallback';
-            } else {
-                container.innerHTML = '<p class="text-slate-500 text-sm p-3">No audio configured.</p>';
-                playBtn.onclick = () => {};
-                playBtn.disabled = true;
-                playBtn.className = 'btn-primary px-6 py-3 text-base flex items-center gap-2 opacity-40 cursor-not-allowed';
-                $('audio-status').textContent = '⛔ No audio';
-            }
+        if (me.isGhost) {
+            document.getElementById('guideBtn').classList.remove('hidden');
+            document.getElementById('resetAnswersBtn').classList.remove('hidden');
         }
 
-        // =============================================================
-        // BUILD QUESTIONS
-        // =============================================================
-        function buildQuestions(key, data) {
-            const container = $('mission-questions');
-            container.innerHTML = '';
-            let count = 0;
+        renderSections();
+        updateStepNav();
+        updateLocationBanner();
+        connectRealtime();
+    }
 
-            if (key === 'a' && data.questions && Array.isArray(data.questions)) {
-                data.questions.forEach((q, idx) => {
-                    const div = document.createElement('div');
-                    div.className = 'q-card';
-                    div.innerHTML = `
-                        <label class="block text-sm font-medium text-slate-200">${q.label}</label>
-                        <input type="text" id="q-a-${idx}" placeholder="Type your answer..." class="input-game mt-1.5">
-                        <span id="fb-a-${idx}" class="text-xs font-medium ml-1"></span>
-                    `;
-                    container.appendChild(div);
-                    count++;
-                });
-            } else if (key === 'b' && data.questions && Array.isArray(data.questions)) {
-                data.questions.forEach((q, idx) => {
-                    const div = document.createElement('div');
-                    div.className = 'q-card';
-                    let optsHtml = q.options.map((opt, oi) => `
-                        <label class="option-label">
-                            <input type="radio" name="q-b-${idx}" value="${oi}">
-                            <span>${opt}</span>
-                        </label>
-                    `).join('');
-                    div.innerHTML = `
-                        <p class="font-medium text-slate-200 text-sm mb-2">${q.label}</p>
-                        <div class="space-y-1.5">${optsHtml}</div>
-                        <span id="fb-b-${idx}" class="text-xs font-medium mt-1.5 block"></span>
-                    `;
-                    container.appendChild(div);
-                    count++;
-                });
-            } else if (key === 'c' && data.arguments && Array.isArray(data.arguments)) {
-                // Table for arguments
-                const tableDiv = document.createElement('div');
-                tableDiv.className = 'overflow-x-auto';
-                let html = `
-                    <table class="w-full text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-white/5">
-                                <th class="p-2 text-left text-slate-300 font-medium">Argument</th>
-                                <th class="p-2 text-center text-slate-300 font-medium w-24">Maria</th>
-                                <th class="p-2 text-center text-slate-300 font-medium w-24">James</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+    /* ================================================================
+       REALTIME
+       ================================================================ */
+    function connectRealtime() {
+        if (!firebaseOk) {
+            applyState(state, { skipToast: true });
+            return;
+        }
+        try {
+            roomRef = db.ref('rooms/' + me.room);
+            roomRef.on('value', snap => {
+                const val = snap.val() || {};
+                state.players = val.players || {};
+                state.answers = val.answers || {};
+                state.auth = val.auth || {};
+                state.lastGuide = val.lastGuide || null;
+                applyState(state);
+            }, err => {
+                console.warn('Room read failed:', err);
+                firebaseOk = false;
+                applyState(state, { skipToast: true });
+            });
+        } catch (e) {
+            console.warn('Room subscribe failed:', e);
+            firebaseOk = false;
+            applyState(state, { skipToast: true });
+        }
+    }
+
+    /* ================================================================
+       RENDER SECTIONS
+       ================================================================ */
+    function renderSections() {
+        const holder = document.getElementById('sections');
+        holder.innerHTML = '';
+        sectionsEls = [];
+        ITEMS.forEach((item, i) => {
+            const el = item.type === 'theme'
+                ? renderTheme(item.data, i + 1, ITEMS.length)
+                : renderListening(item.data, i + 1, ITEMS.length);
+            el.dataset.step = i;
+            if (i === 0) el.classList.add('active-step');
+            holder.appendChild(el);
+            sectionsEls.push(el);
+        });
+    }
+
+    function renderTheme(theme, num, total) {
+        const sec = document.createElement('section');
+        sec.className = 'section theme-section';
+        sec.dataset.themeId = theme.id;
+
+        const aVisual = `<div class="side-icon-circle"><i class="fas ${theme.sideA.icon}"></i></div>`;
+        const bVisual = `<div class="side-icon-circle"><i class="fas ${theme.sideB.icon}"></i></div>`;
+
+        sec.innerHTML = `
+            <div class="section-head">
+                <span class="sec-badge"><i class="fas fa-comments"></i> Choice</span>
+                <span class="sec-title">${escapeHtml(theme.title)}</span>
+                <span class="sec-num">${num} / ${total}</span>
+            </div>
+            <div class="section-body">
+                <div class="arena">
+                    <div class="side" style="--accent:${theme.sideA.color}; --tint:${theme.sideA.tint};">
+                        ${aVisual}
+                        <div>
+                            <span class="side-label">${escapeHtml(theme.sideA.label)}</span>
+                            <h3 class="side-name">${escapeHtml(theme.sideA.name)}</h3>
+                            <p class="side-desc">${escapeHtml(theme.sideA.desc)}</p>
+                        </div>
+                    </div>
+                    <div class="vs-circle">VS</div>
+                    <div class="side" style="--accent:${theme.sideB.color}; --tint:${theme.sideB.tint};">
+                        ${bVisual}
+                        <div>
+                            <span class="side-label">${escapeHtml(theme.sideB.label)}</span>
+                            <h3 class="side-name">${escapeHtml(theme.sideB.name)}</h3>
+                            <p class="side-desc">${escapeHtml(theme.sideB.desc)}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="theme-q">
+                    <i class="fas fa-question"></i>
+                    <p>${escapeHtml(theme.question)}</p>
+                </div>
+
+                <p class="chips-label">Words you can use</p>
+                <div class="chips">
+                    ${theme.chips.map(w => `<span class="chip">${escapeHtml(w)}</span>`).join('')}
+                </div>
+
+                <div class="proscons">
+                    <div class="pc-box pros">
+                        <i class="fas fa-thumbs-up"></i>
+                        <span>${escapeHtml(theme.prosPrompt)}</span>
+                    </div>
+                    <div class="pc-box cons">
+                        <i class="fas fa-thumbs-down"></i>
+                        <span>${escapeHtml(theme.consPrompt)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        return sec;
+    }
+
+    function renderListening(listen, num, total) {
+        const sec = document.createElement('section');
+        sec.className = 'section listening-section ' + listen.variant;
+        sec.dataset.listeningId = listen.id;
+        sec.innerHTML = `
+            <div class="section-head">
+                <span class="sec-badge listen"><i class="fas fa-headphones"></i> Listening</span>
+                <span class="sec-title">${escapeHtml(listen.title)}</span>
+                <span class="sec-num">${num} / ${total}</span>
+            </div>
+            <div class="section-body">
+                <div data-auth-panel></div>
+                <div data-audio-row></div>
+                <p class="listen-intro">${escapeHtml(listen.intro)}</p>
+                <div class="progress-bar" data-progress></div>
+                <div class="q-columns" data-cols></div>
+                <div class="teamwork-banner" data-teamwork>
+                    <i class="fas fa-champagne-glasses"></i>
+                    <div>
+                        <strong>Great job, team! 🎉</strong>
+                        <span>All the questions are answered.</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        return sec;
+    }
+
+    /* ================================================================
+       AUTH PANEL
+       ================================================================ */
+    function renderAuthPanel(listen, authorized) {
+        if (me.isGhost) {
+            if (authorized) {
+                return `
+                    <div class="auth-panel ghost">
+                        <i class="fas fa-unlock icon"></i>
+                        <div>
+                            <strong>Answers are open</strong>
+                            <p>Students can answer now — but only their own questions. Lock again if you need to.</p>
+                        </div>
+                        <button type="button" class="auth-btn revoke" data-revoke-auth="${listen.id}">
+                            <i class="fas fa-lock"></i> Lock again
+                        </button>
+                    </div>
                 `;
-                data.arguments.forEach((arg, idx) => {
-                    html += `
-                        <tr class="border-t border-white/5">
-                            <td class="p-2 text-sm text-slate-200">${arg.text}</td>
-                            <td class="p-2 text-center"><input type="checkbox" class="c-check" data-arg="${idx}" data-person="maria" class="w-4 h-4 accent-indigo-500"></td>
-                            <td class="p-2 text-center"><input type="checkbox" class="c-check" data-arg="${idx}" data-person="james" class="w-4 h-4 accent-indigo-500"></td>
-                        </tr>
-                    `;
-                });
-                html += `</tbody></table>`;
-                tableDiv.innerHTML = html;
-                container.appendChild(tableDiv);
-
-                // Final question
-                if (data.finalQuestion) {
-                    const div = document.createElement('div');
-                    div.className = 'q-card mt-4';
-                    div.innerHTML = `
-                        <p class="font-medium text-slate-200 text-sm">${data.finalQuestion.label}</p>
-                        <input type="text" id="q-c-final" placeholder="Your opinion..." class="input-game mt-1.5">
-                        <span id="fb-c-final" class="text-xs font-medium ml-1"></span>
-                    `;
-                    container.appendChild(div);
-                    count++;
-                }
-                // Count checkboxes as questions
-                count += data.arguments.length;
-            } else {
-                container.innerHTML = '<p class="text-slate-500 text-sm">No questions loaded for this mission.</p>';
-                return;
             }
+            return `
+                <div class="auth-panel ghost">
+                    <i class="fas fa-shield-halved icon"></i>
+                    <div>
+                        <strong>Answers are locked</strong>
+                        <p>Play the audio first, then authorize students to answer.</p>
+                    </div>
+                    <button type="button" class="auth-btn authorize" data-authorize="${listen.id}">
+                        <i class="fas fa-unlock"></i> Authorize answers
+                    </button>
+                </div>
+            `;
+        }
+        if (authorized) {
+            return `
+                <div class="auth-panel go">
+                    <div class="go-icon">🎮</div>
+                    <div>
+                        <strong>GO! Answer the questions now!</strong>
+                        <p>Answer only <b>your own</b> questions. First try = 3 points · Second try = 2 points · Third try = 1 point.</p>
+                    </div>
+                </div>
+            `;
+        }
+        return `
+            <div class="auth-panel locked">
+                <i class="fas fa-lock icon"></i>
+                <div>
+                    <strong>Wait for your teacher</strong>
+                    <p>The questions will open after the audio finishes on the Zoom screen.</p>
+                </div>
+            </div>
+        `;
+    }
 
-            $('question-counter').textContent = `${count} questions`;
-            G.totalQuestions = count;
+    function renderAudioRow(listen) {
+        if (me.isGhost) {
+            return `
+                <div class="audio-row">
+                    <i class="fas fa-headphones"></i>
+                    <audio controls preload="none" src="${listen.audio}"></audio>
+                </div>
+            `;
+        }
+        return `
+            <div class="audio-teacher-only">
+                <i class="fas fa-tv"></i>
+                <div>
+                    <strong>Listen on the Zoom screen.</strong>
+                    <span style="display:block;font-weight:500;opacity:0.85;margin-top:2px;">Your teacher is playing the audio. Concentrate and take notes.</span>
+                </div>
+            </div>
+        `;
+    }
+
+    /* ================================================================
+       LISTENING COLUMNS
+       ================================================================ */
+    function refreshListeningColumns(listen, mode) {
+        const sec = document.querySelector(`[data-listening-id="${listen.id}"]`);
+        if (!sec) return;
+        const cols = sec.querySelector('[data-cols]');
+        if (!cols) return;
+        const list = rolesForMode(mode);
+        cols.dataset.count = list.length;
+        cols.innerHTML = list.map(role => {
+            const qs = listen.questions.filter(q => ownerOfQ(q.num, mode) === role);
+            return `
+                <div class="q-col ${role}">
+                    <div class="q-col-head ${role}">
+                        <span class="player-tag ${role}"><i class="fas fa-user"></i> Player ${role}</span>
+                        <span>${qs.length} question${qs.length !== 1 ? 's' : ''}</span>
+                        <span class="you-badge" data-you-badge="${role}" style="display:none;">You</span>
+                    </div>
+                    ${qs.map(q => renderQuestion(q)).join('')}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderQuestion(q) {
+        return `
+            <div class="q-card" data-qid="${q.id}">
+                <div class="q-head">
+                    <span class="q-num-badge">${q.num}</span>
+                    <p class="q-text">${escapeHtml(q.text)}</p>
+                    <span class="owner-label" data-owner-label></span>
+                </div>
+                <div class="options">
+                    ${q.options.map(o => `
+                        <button class="opt" type="button" data-choice="${o.k}" disabled>
+                            <span class="opt-letter">${o.k}</span>
+                            <span class="opt-body">${escapeHtml(o.text)}</span>
+                        </button>
+                    `).join('')}
+                </div>
+                <div class="feedback" data-feedback></div>
+                <div data-points></div>
+            </div>
+        `;
+    }
+
+    /* ================================================================
+       APPLY STATE
+       ================================================================ */
+    function applyState(s, opts) {
+        opts = opts || {};
+        const presentRoles = presentRolesOf(s);
+        const mode = getMode(presentRoles);
+        const rolesStr = presentRoles.join(',') + '|' + mode;
+
+        if (Object.keys(s.answers || {}).length === 0) {
+            lastKnownSolved = {};
         }
 
-        // =============================================================
-        // CHECK MISSION
-        // =============================================================
-        function checkMission(key) {
-            const data = G.activitiesData[key];
-            if (!data) return;
-
-            let correct = 0;
-            let total = 0;
-
-            if (key === 'a' && data.questions) {
-                data.questions.forEach((q, idx) => {
-                    const input = $(`q-a-${idx}`);
-                    const fb = $(`fb-a-${idx}`);
-                    if (!input) return;
-                    const userAns = input.value.trim().toLowerCase();
-                    const correctAns = String(q.correctAnswer).toLowerCase();
-                    total++;
-                    const div = input.closest('.q-card');
-                    if (userAns === correctAns) {
-                        fb.textContent = '✅';
-                        fb.className = 'text-emerald-400 text-xs font-medium ml-1';
-                        div.className = 'q-card correct';
-                        correct++;
-                    } else {
-                        fb.textContent = `❌ ${q.correctAnswer}`;
-                        fb.className = 'text-rose-400 text-xs font-medium ml-1';
-                        div.className = 'q-card wrong';
-                    }
-                });
-            } else if (key === 'b' && data.questions) {
-                data.questions.forEach((q, idx) => {
-                    const radios = document.querySelectorAll(`input[name="q-b-${idx}"]`);
-                    let selected = null;
-                    radios.forEach(r => { if (r.checked) selected = parseInt(r.value); });
-                    const fb = $(`fb-b-${idx}`);
-                    total++;
-                    const div = radios[0]?.closest('.q-card');
-                    if (selected === q.correctIndex) {
-                        fb.textContent = '✅ Correct';
-                        fb.className = 'text-emerald-400 text-xs font-medium mt-1.5 block';
-                        if (div) div.className = 'q-card correct';
-                        correct++;
-                        // Highlight correct option
-                        radios.forEach((r, oi) => {
-                            const label = r.closest('.option-label');
-                            if (oi === q.correctIndex) label.className = 'option-label correct-answer';
-                        });
-                    } else {
-                        fb.textContent = `❌ Correct: ${q.options[q.correctIndex]}`;
-                        fb.className = 'text-rose-400 text-xs font-medium mt-1.5 block';
-                        if (div) div.className = 'q-card wrong';
-                        radios.forEach((r, oi) => {
-                            const label = r.closest('.option-label');
-                            if (oi === q.correctIndex) label.className = 'option-label correct-answer';
-                            if (r.checked && oi !== q.correctIndex) label.className = 'option-label wrong-answer';
-                        });
-                    }
-                });
-            } else if (key === 'c' && data.arguments) {
-                const checks = document.querySelectorAll('.c-check');
-                let checkedCount = 0;
-                let correctChecks = 0;
-                data.arguments.forEach((arg, idx) => {
-                    const maria = document.querySelector(`.c-check[data-arg="${idx}"][data-person="maria"]`);
-                    const james = document.querySelector(`.c-check[data-arg="${idx}"][data-person="james"]`);
-                    if (maria) {
-                        checkedCount++;
-                        const mariaCorrect = arg.correctPerson === 'maria';
-                        if (maria.checked === mariaCorrect) correctChecks++;
-                        // Visual feedback
-                        const row = maria.closest('tr');
-                        if (maria.checked === mariaCorrect) {
-                            row.style.background = 'rgba(52,211,153,0.05)';
-                        } else {
-                            row.style.background = 'rgba(239,68,68,0.05)';
-                        }
-                    }
-                    if (james) {
-                        checkedCount++;
-                        const jamesCorrect = arg.correctPerson === 'james';
-                        if (james.checked === jamesCorrect) correctChecks++;
-                    }
-                });
-                correct = correctChecks;
-                total = checkedCount;
-
-                // Final question (opinion) - just check if answered
-                const finalInput = $(`q-c-final`);
-                if (finalInput && finalInput.value.trim()) {
-                    $(`fb-c-final`).textContent = '✅ Opinion recorded';
-                    $(`fb-c-final`).className = 'text-emerald-400 text-xs font-medium ml-1';
-                } else if (finalInput) {
-                    $(`fb-c-final`).textContent = '💬 Optional opinion';
-                    $(`fb-c-final`).className = 'text-slate-400 text-xs font-medium ml-1';
-                }
-            }
-
-            // Calculate points and stars
-            const totalQ = total || 1;
-            const pct = Math.round((correct / totalQ) * 100);
-            let stars = 0;
-            if (pct >= 90) stars = 3;
-            else if (pct >= 70) stars = 2;
-            else if (pct >= 50) stars = 1;
-            const points = Math.round((pct / 100) * 100);
-
-            // Update state
-            const m = G.missions[key];
-            m.completed = true;
-            m.stars = stars;
-            m.points = points;
-            G.totalPoints = Object.values(G.missions).reduce((sum, x) => sum + (x.points || 0), 0);
-
-            // Unlock next
-            if (key === 'a' && m.completed) G.missions.b.unlocked = true;
-            if (key === 'b' && m.completed) G.missions.c.unlocked = true;
-
-            saveProgress();
-            renderDashboard();
-
-            // Show feedback
-            const fb = $('mission-feedback');
-            fb.textContent = `🎯 ${correct}/${totalQ} correct · ${pct}% · ⭐ ${stars} stars · +${points} points`;
-            fb.className = 'mt-4 text-sm font-medium text-emerald-400';
-
-            // Show modal
-            showResultsModal(key, stars, points, pct);
+        if (rolesStr !== lastRolesStr) {
+            LISTENINGS.forEach(l => refreshListeningColumns(l, mode));
+            lastRolesStr = rolesStr;
         }
 
-        // =============================================================
-        // RESULTS MODAL
-        // =============================================================
-        function showResultsModal(key, stars, points, pct) {
-            const starsStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
-            $('modal-stars').textContent = starsStr;
-            $('modal-title').textContent = stars >= 3 ? '🏆 Perfect! Amazing work!' :
-                stars >= 2 ? '🌟 Great job, agent!' :
-                '✅ Mission complete!';
-            $('modal-subtitle').textContent = `Mission ${key.toUpperCase()} · ${pct}% accuracy`;
-            $('modal-points').textContent = `${points} pts`;
-            $('modal-accuracy').textContent = `${pct}%`;
-
-            // Next button
-            const nextBtn = $('modal-next-btn');
-            if (key === 'a' && !G.missions.b.completed) {
-                nextBtn.textContent = '→ Mission 2: Tone';
-                nextBtn.onclick = () => { closeModal();
-                    G.currentMission = 'b';
-                    launchMission('b'); };
-            } else if (key === 'b' && !G.missions.c.completed) {
-                nextBtn.textContent = '→ Mission 3: Boardroom';
-                nextBtn.onclick = () => { closeModal();
-                    G.currentMission = 'c';
-                    launchMission('c'); };
-            } else if (key === 'c') {
-                nextBtn.textContent = '🏁 All Done!';
-                nextBtn.onclick = () => { closeModal();
-                    goToDashboard(); };
-            } else {
-                nextBtn.textContent = '📊 Dashboard';
-                nextBtn.onclick = () => { closeModal();
-                    goToDashboard(); };
-            }
-
-            $('modal-container').classList.remove('hidden-screen');
-        }
-
-        function closeModal() {
-            $('modal-container').classList.add('hidden-screen');
-        }
-        // Close on backdrop click
-        $('modal-container').addEventListener('click', (e) => {
-            if (e.target === $('modal-container')) closeModal();
+        $$('[data-you-badge]').forEach(el => {
+            el.style.display = (!me.isGhost && el.dataset.youBadge === me.role) ? 'inline-flex' : 'none';
         });
 
-        // =============================================================
-        // TEACHER PANEL
-        // =============================================================
-        function showTeacherPanel() {
-            showScreen('screen-teacher');
-            initTeacherTabs();
-        }
+        updateTeamScore(s);
 
-        let teacherTabsInited = false;
-
-        function initTeacherTabs() {
-            if (teacherTabsInited) return;
-            teacherTabsInited = true;
-            $$('.teacher-tab').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    $$('.teacher-tab').forEach(b => {
-                        b.className =
-                            'teacher-tab px-5 py-2 rounded-xl text-sm font-medium bg-white/5 text-slate-400 border border-white/5';
-                    });
-                    btn.className =
-                        'teacher-tab px-5 py-2 rounded-xl text-sm font-medium bg-indigo-600/30 text-white border border-indigo-500/30';
-                    $$('.teacher-tab-content').forEach(el => el.classList.add('hidden-screen'));
-                    const id = btn.dataset.tab;
-                    $(id).classList.remove('hidden-screen');
-                });
-            });
-            // Activate first tab
-            const first = document.querySelector('.teacher-tab');
-            if (first) first.click();
-
-            // Setup each activity
-            setupTeacherActivity('a');
-            setupTeacherActivity('b');
-            setupTeacherActivity('c');
-        }
-
-        function setupTeacherActivity(letter) {
-            const generateBtn = $(`teacher-${letter}-generate`);
-            const statusEl = $(`teacher-${letter}-status`);
-            const previewDiv = $(`teacher-${letter}-preview`);
-            const questionsTextarea = $(`teacher-${letter}-questions`);
-            const saveBtn = $(`teacher-${letter}-save`);
-            const fileInput = $(`teacher-${letter}-file`);
-            const urlInput = $(`teacher-${letter}-url`);
-            const summaryInput = $(`teacher-${letter}-summary`);
-
-            if (!generateBtn) return;
-
-            generateBtn.addEventListener('click', async () => {
-                const summary = summaryInput.value.trim();
-                if (!summary) {
-                    statusEl.textContent = '⚠️ Paste a transcript first.';
-                    statusEl.className = 'text-xs text-rose-400';
-                    return;
+        if (s.lastGuide && s.lastGuide.pushId && s.lastGuide.pushId !== lastSeenGuidePushId) {
+            if (!me.isGhost) {
+                const stepIdx = Number(s.lastGuide.step);
+                if (!isNaN(stepIdx) && stepIdx >= 0 && stepIdx < ITEMS.length) {
+                    navigateTo(stepIdx, { fromGuide: true });
+                    toast('📍 Teacher: "Go to ' + stepLabel(ITEMS[stepIdx]) + '"', 'gold');
                 }
-                statusEl.textContent = '⏳ Generating with AI...';
-                statusEl.className = 'text-xs text-slate-400';
-                generateBtn.disabled = true;
-
-                try {
-                    const prompt = buildTeacherPrompt(letter, summary);
-                    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': 'Bearer ' + GROQ_API_KEY
-                        },
-                        body: JSON.stringify({
-                            model: GROQ_MODEL,
-                            temperature: 0.5,
-                            response_format: { type: 'json_object' },
-                            messages: [
-                                { role: 'system',
-                                    content: 'You are an expert English teacher for C-level executives. Generate questions for listening activities based on the provided transcript. Output valid JSON only. Use the exact format required.' },
-                                { role: 'user', content: prompt }
-                            ]
-                        })
-                    });
-                    if (!response.ok) {
-                        const errText = await response.text();
-                        throw new Error('Groq error ' + response.status + ': ' + errText.slice(0, 200));
-                    }
-                    const data = await response.json();
-                    const raw = data.choices[0].message.content;
-                    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-                    if (!jsonMatch) throw new Error('No JSON found.');
-                    const parsed = JSON.parse(jsonMatch[0]);
-                    questionsTextarea.value = JSON.stringify(parsed, null, 2);
-                    previewDiv.classList.remove('hidden-screen');
-                    statusEl.textContent = '✅ Generated! Review and save.';
-                    statusEl.className = 'text-xs text-emerald-400';
-                } catch (err) {
-                    console.error(err);
-                    statusEl.textContent = '⚠️ ' + err.message + ' — using fallback.';
-                    statusEl.className = 'text-xs text-rose-400';
-                    const fallback = generateFallback(letter, summary);
-                    questionsTextarea.value = JSON.stringify(fallback, null, 2);
-                    previewDiv.classList.remove('hidden-screen');
-                } finally {
-                    generateBtn.disabled = false;
-                }
-            });
-
-            saveBtn.addEventListener('click', () => {
-                let parsed;
-                try {
-                    parsed = JSON.parse(questionsTextarea.value);
-                } catch (e) {
-                    statusEl.textContent = '⚠️ Invalid JSON. Fix it.';
-                    statusEl.className = 'text-xs text-rose-400';
-                    return;
-                }
-                const audioFile = fileInput.value.trim();
-                const audioUrl = urlInput.value.trim();
-                const dataToSave = { audioFile, audioUrl, ...parsed };
-                db.ref(`activities/${letter}`).set(dataToSave).then(() => {
-                    statusEl.textContent = '✅ Saved to Firebase! Students see it live.';
-                    statusEl.className = 'text-xs text-emerald-400 font-medium';
-                }).catch(err => {
-                    statusEl.textContent = '⚠️ Firebase error: ' + err.message;
-                    statusEl.className = 'text-xs text-rose-400';
-                });
-            });
-        }
-
-        function buildTeacherPrompt(letter, summary) {
-            const s = summary.length > 2000 ? summary.slice(0, 2000) + '...' : summary;
-            if (letter === 'a') {
-                return `Based on this transcript of a CFO earnings call, generate exactly 8 fill-in-the-blank questions. Each question has a "label" (e.g., "Revenue growth (%)") and a "correctAnswer" (extracted from the text). Output: { "questions": [ { "label": "...", "correctAnswer": "..." } ] }. Transcript: ${s}`;
-            } else if (letter === 'b') {
-                return `Based on this conversation, generate 3 multiple-choice questions about tone, subtext, and underlying message. Each has a "label", an array of 3 "options", and a "correctIndex" (0,1,2). Output: { "questions": [ { "label": "...", "options": ["...","...","..."], "correctIndex": 0 } ] }. Transcript: ${s}`;
-            } else if (letter === 'c') {
-                return `Based on this debate, generate a list of 8 arguments with "text" and "correctPerson" ("maria" or "james"). Also generate a final question with "label" (e.g., "Who won the debate and why?"). Output: { "arguments": [ { "text": "...", "correctPerson": "maria" } ], "finalQuestion": { "label": "..." } }. Transcript: ${s}`;
             }
-            return '';
+            lastSeenGuidePushId = s.lastGuide.pushId;
         }
 
-        function generateFallback(letter, summary) {
-            if (letter === 'a') {
-                return {
-                    questions: [
-                        { label: "Revenue growth (%)", correctAnswer: "14.2" },
-                        { label: "Total revenue ($ billions)", correctAnswer: "3.8" },
-                        { label: "Cloud revenue ($ billions)", correctAnswer: "1.2" },
-                        { label: "Operating margin (current %)", correctAnswer: "22.4" },
-                        { label: "Operating margin (last year %)", correctAnswer: "19.7" },
-                        { label: "Free cash flow ($ millions)", correctAnswer: "410" },
-                        { label: "Cash position ($ billions)", correctAnswer: "6.7" },
-                        { label: "Buyback program ($ billions)", correctAnswer: "2" }
-                    ]
-                };
-            } else if (letter === 'b') {
-                return {
-                    questions: [
-                        { label: "What is the manager's underlying message?", options: [
-                                "You are going to be fired", "I need a faster timeline",
-                                "The board doesn't trust you"
-                            ], correctIndex: 1 },
-                        { label: "What is the manager's tone?", options: ["Aggressive", "Supportive but firm",
-                                "Indifferent"
-                            ], correctIndex: 1 },
-                        { label: "What does the manager imply about the board?", options: [
-                                "They are satisfied", "They are losing patience",
-                                "They want to replace the manager"
-                            ], correctIndex: 1 }
-                    ]
-                };
-            } else {
-                return {
-                    arguments: [
-                        { text: "Europe is saturated", correctPerson: "maria" },
-                        { text: "Southeast Asia is the future", correctPerson: "maria" },
-                        { text: "Supply chain is already stretched", correctPerson: "james" },
-                        { text: "Acquire a European competitor", correctPerson: "james" },
-                        { text: "Build local partnerships in Asia", correctPerson: "maria" },
-                        { text: "ROI could be 30% in 3 years", correctPerson: "maria" },
-                        { text: "Lower risk, faster return", correctPerson: "james" },
-                        { text: "We cannot afford to wait", correctPerson: "maria" }
-                    ],
-                    finalQuestion: { label: "Who won the debate in your opinion? Why?" }
-                };
+        LISTENINGS.forEach(listen => {
+            const sec = document.querySelector(`[data-listening-id="${listen.id}"]`);
+            if (!sec) return;
+            const auth = !!s.auth[listen.id];
+            updateListeningState(sec, listen, mode, s, auth);
+
+            if (!me.isGhost && auth && !lastAuthSnapshot[listen.id]) {
+                if (!sec.classList.contains('active-step')) {
+                    toast('🎮 ' + listen.title + ' is now open!', 'success');
+                }
             }
-        }
-
-        // =============================================================
-        // KEYBOARD SHORTCUT: Escape to close modal
-        // =============================================================
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
+            lastAuthSnapshot[listen.id] = auth;
         });
 
-        // =============================================================
-        // INIT
-        // =============================================================
-        // Check URL for teacher role
-        window.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('role') === 'teacher') {
-                showTeacherPanel();
-            } else {
-                // Check if user already exists in localStorage
-                const saved = localStorage.getItem('listeninglab_user');
-                if (saved) {
-                    try {
-                        const data = JSON.parse(saved);
-                        G.player.id = data.id;
-                        G.player.name = data.name;
-                        loadGameState();
-                        showScreen('screen-dashboard');
-                        renderDashboard();
-                        return;
-                    } catch (e) {}
+        if (!opts.skipToast && !me.isGhost) {
+            Object.keys(s.answers || {}).forEach(qid => {
+                const ans = s.answers[qid];
+                if (!ans || !ans.correct) return;
+                if (lastKnownSolved[qid]) return;
+                lastKnownSolved[qid] = true;
+                if (ans.who === me.role) return;
+                const player = s.players[ans.who];
+                if (!player) return;
+                const q = ALL_QUESTIONS[qid];
+                if (!q) return;
+                toast('✅ ' + player.name + ' got Question ' + q.num + ' right (+' + (ans.points || 0) + ' pts)', 'success');
+            });
+        }
+    }
+
+    function updateListeningState(sec, listen, mode, s, auth) {
+        const panel = sec.querySelector('[data-auth-panel]');
+        if (panel) {
+            const newHtml = renderAuthPanel(listen, auth);
+            if (panel.innerHTML.trim() !== newHtml.trim()) {
+                panel.innerHTML = newHtml;
+            }
+        }
+        const audioRow = sec.querySelector('[data-audio-row]');
+        if (audioRow) {
+            const newHtml = renderAudioRow(listen);
+            if (audioRow.innerHTML.trim() !== newHtml.trim()) {
+                audioRow.innerHTML = newHtml;
+            }
+        }
+
+        listen.questions.forEach(q => {
+            const card = sec.querySelector(`[data-qid="${q.id}"]`);
+            if (!card) return;
+            const ans = s.answers[q.id];
+            const solved = !!(ans && ans.correct);
+            const isWrongAttempt = !!(ans && !ans.correct);
+            const owner = ownerOfQ(q.num, mode);
+            const isMine = owner === me.role && !me.isGhost;
+            const iCanClick = isMine && !solved && auth;
+
+            card.classList.toggle('solved', solved);
+
+            const ownerLabel = card.querySelector('[data-owner-label]');
+            if (ownerLabel) {
+                if (isMine) {
+                    ownerLabel.style.display = 'none';
+                } else {
+                    ownerLabel.textContent = 'Player ' + owner + "'s";
+                    ownerLabel.style.display = 'inline-flex';
                 }
-                showScreen('screen-landing');
+            }
+            card.classList.toggle('not-yours', !isMine && !me.isGhost);
+
+            card.querySelectorAll('.opt').forEach(opt => {
+                const isChosen = ans && opt.dataset.choice === ans.choice;
+                opt.classList.toggle('correct', solved && isChosen);
+                opt.classList.toggle('wrong', isWrongAttempt && isChosen);
+                opt.disabled = !iCanClick;
+            });
+
+            const fb = card.querySelector('[data-feedback]');
+            const whoName = (s.players[ans && ans.who] && s.players[ans.who].name) || (ans ? ('Player ' + ans.who) : '');
+
+            if (solved) {
+                fb.className = 'feedback success';
+                fb.textContent = '✅ ' + whoName + ' got it right · ' + q.explain;
+            } else if (isWrongAttempt) {
+                fb.className = 'feedback live';
+                fb.textContent = '👀 ' + whoName + ' tried (' + ans.choice + ') — still thinking';
+            } else {
+                fb.className = 'feedback';
+                fb.textContent = '';
             }
 
-            // Save user on login
-            const origSubmit = $('form-setup').addEventListener('submit', () => {
-                setTimeout(() => {
-                    localStorage.setItem('listeninglab_user', JSON.stringify({ id: G.player.id,
-                        name: G.player.name }));
-                }, 100);
-            });
+            const pointsEl = card.querySelector('[data-points]');
+            if (pointsEl) {
+                if (solved && ans.points) {
+                    pointsEl.innerHTML = `<span class="points-badge">🏆 +${ans.points} pts</span>`;
+                } else if (isWrongAttempt && ans.attempts) {
+                    const nextPoints = pointsForAttempt(ans.attempts + 1);
+                    pointsEl.innerHTML = `<span class="points-badge">Next try worth ${nextPoints} pt${nextPoints !== 1 ? 's' : ''}</span>`;
+                } else {
+                    pointsEl.innerHTML = '';
+                }
+            }
         });
 
-        // Expose for inline onclick
-        window.launchMission = launchMission;
-        window.goToDashboard = goToDashboard;
-        window.showTeacherPanel = showTeacherPanel;
-        window.closeModal = closeModal;
-        window.renderDashboard = renderDashboard;
-    </script>
+        updateProgressBar(sec, listen, mode, s);
+        updateTeamwork(sec, listen, s);
+    }
+
+    function updateProgressBar(sec, listen, mode, s) {
+        const el = sec.querySelector('[data-progress]');
+        if (!el) return;
+        const visible = rolesForMode(mode);
+        const items = visible.map(role => {
+            const roleQs = listen.questions.filter(q => ownerOfQ(q.num, mode) === role);
+            let done = 0;
+            let pts = 0;
+            roleQs.forEach(q => {
+                const ans = s.answers[q.id];
+                if (ans && ans.correct) {
+                    done++;
+                    pts += (typeof ans.points === 'number') ? ans.points : 0;
+                }
+            });
+            const isPresent = !!(s.players[role]);
+            const name = (s.players[role] && s.players[role].name) || ('Player ' + role);
+            return `
+                <span class="prog-item" ${isPresent ? '' : 'style="opacity:.55;"'}>
+                    <span class="prog-avatar ${role}">${escapeHtml(initials(isPresent ? name : role))}</span>
+                    <span class="prog-name">${isPresent ? escapeHtml(name) : 'Waiting for Player ' + role}</span>
+                    <span class="prog-count ${done === roleQs.length ? 'done' : ''}">${done}/${roleQs.length}</span>
+                    ${pts > 0 ? `<span class="prog-pts">${pts} pts</span>` : ''}
+                </span>
+            `;
+        }).join('<span class="prog-divider">·</span>');
+        el.innerHTML = items;
+    }
+
+    function updateTeamScore(s) {
+        let total = 0;
+        LISTENINGS.forEach(l => l.questions.forEach(q => {
+            const ans = s.answers[q.id];
+            if (ans && ans.correct) {
+                total += (typeof ans.points === 'number') ? ans.points : 0;
+            }
+        }));
+        const el = document.getElementById('teamScoreVal');
+        if (el) el.textContent = total;
+    }
+
+    function updateTeamwork(sec, listen, s) {
+        const banner = sec.querySelector('[data-teamwork]');
+        if (!banner) return;
+        const allDone = listen.questions.every(q => s.answers[q.id] && s.answers[q.id].correct);
+        banner.classList.toggle('show', allDone);
+    }
+
+    /* ================================================================
+       CLICKS — auth, revoke, answers
+       ================================================================ */
+    document.getElementById('sections').addEventListener('click', (e) => {
+        const authBtn = e.target.closest('[data-authorize]');
+        if (authBtn) {
+            const listenId = authBtn.dataset.authorize;
+            if (firebaseOk) {
+                db.ref('rooms/' + me.room + '/auth/' + listenId).set(true)
+                    .then(() => toast('🔓 Answers are now open for students', 'success'))
+                    .catch(err => console.warn('Auth write failed:', err));
+            } else {
+                state.auth[listenId] = true;
+                applyState(state, { skipToast: true });
+            }
+            return;
+        }
+
+        const revokeBtn = e.target.closest('[data-revoke-auth]');
+        if (revokeBtn) {
+            if (!confirm('Lock the answers again? Students will not be able to answer until you open them again.')) return;
+            const listenId = revokeBtn.dataset.revokeAuth;
+            if (firebaseOk) {
+                db.ref('rooms/' + me.room + '/auth/' + listenId).set(false)
+                    .catch(err => console.warn('Revoke write failed:', err));
+            } else {
+                state.auth[listenId] = false;
+                applyState(state, { skipToast: true });
+            }
+            return;
+        }
+
+        const opt = e.target.closest('.opt');
+        if (opt && !opt.disabled) {
+            handleAnswer(opt);
+        }
+    });
+
+    /* ================================================================
+       ANSWER — with ownership + auth + scoring
+       ================================================================ */
+    function handleAnswer(opt) {
+        const card = opt.closest('.q-card');
+        if (!card) return;
+        const qid = card.dataset.qid;
+        const q = ALL_QUESTIONS[qid];
+        if (!q) return;
+
+        if (me.isGhost) return;
+
+        const presentRoles = presentRolesOf(state);
+        const mode = getMode(presentRoles);
+        const owner = ownerOfQ(q.num, mode);
+        if (owner !== me.role) {
+            toast('This is Player ' + owner + "'s question — you can only answer your own.", 'gold');
+            return;
+        }
+
+        if (state.answers[qid] && state.answers[qid].correct) return;
+
+        const listen = LISTENINGS.find(l => l.questions.some(x => x.id === qid));
+        if (!listen) return;
+        if (!state.auth || !state.auth[listen.id]) {
+            toast('⏳ Wait for your teacher to open the questions.', 'gold');
+            return;
+        }
+
+        const choice = opt.dataset.choice;
+        const isCorrect = choice === q.correct;
+        const prevAns = state.answers[qid];
+        const prevAttempts = (prevAns && typeof prevAns.attempts === 'number') ? prevAns.attempts : 0;
+        const newAttempts = prevAttempts + 1;
+        let points = 0;
+        if (isCorrect) points = pointsForAttempt(newAttempts);
+
+        const answerData = {
+            choice, correct: isCorrect, who: me.role,
+            attempts: newAttempts, points,
+            ts: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        state.answers[qid] = { choice, correct: isCorrect, who: me.role, attempts: newAttempts, points };
+        applyState(state, { skipToast: true });
+
+        if (firebaseOk) {
+            db.ref('rooms/' + me.room + '/answers/' + qid).set(answerData)
+                .catch(err => console.warn('Answer write failed:', err));
+        }
+
+        if (isCorrect) {
+            toast('🏆 +' + points + ' pts! ' + (newAttempts === 1 ? 'Perfect first try!' : 'Nice recovery!'), 'success');
+        }
+    }
+
+    /* ================================================================
+       GUIDE BUTTON (ghost)
+       ================================================================ */
+    document.getElementById('guideBtn').addEventListener('click', () => {
+        if (!me.isGhost) return;
+        const pushId = CLIENT_ID + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        if (firebaseOk) {
+            db.ref('rooms/' + me.room + '/lastGuide').set({
+                step: currentStep, pushId,
+                ts: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => toast('📤 Class guided to: ' + stepLabel(ITEMS[currentStep]), 'gold'))
+              .catch(err => console.warn('Guide write failed:', err));
+        } else {
+            toast('📤 (local mode) Guided to: ' + stepLabel(ITEMS[currentStep]), 'gold');
+        }
+    });
+
+    /* ================================================================
+       RESET ANSWERS (ghost only)
+       ================================================================ */
+    document.getElementById('resetAnswersBtn').addEventListener('click', () => {
+        if (!me.isGhost) return;
+        if (!confirm('Reset all answers and lock the questions again?\n\nThis clears all points, attempts and correct answers. You will need to authorize students again for the next class.')) return;
+
+        if (firebaseOk) {
+            const updates = {};
+            updates['rooms/' + me.room + '/answers'] = null;
+            updates['rooms/' + me.room + '/auth/listening1'] = null;
+            updates['rooms/' + me.room + '/auth/listening2'] = null;
+            updates['rooms/' + me.room + '/lastGuide'] = null;
+            db.ref().update(updates)
+                .then(() => {
+                    lastKnownSolved = {};
+                    lastAuthSnapshot = {};
+                    lastSeenGuidePushId = null;
+                    state.answers = {};
+                    state.auth = {};
+                    state.lastGuide = null;
+                    applyState(state, { skipToast: true });
+                    toast('🧹 Answers cleared, questions locked', 'success');
+                })
+                .catch(err => {
+                    console.warn('Reset failed:', err);
+                    toast('Could not reset. Try again.', 'gold');
+                });
+        } else {
+            state.answers = {};
+            state.auth = {};
+            state.lastGuide = null;
+            lastKnownSolved = {};
+            lastAuthSnapshot = {};
+            lastSeenGuidePushId = null;
+            applyState(state, { skipToast: true });
+            toast('🧹 Answers cleared (local mode)', 'success');
+        }
+    });
+
+    /* ================================================================
+       STEP NAV
+       ================================================================ */
+    function navigateTo(step, opts) {
+        opts = opts || {};
+        if (step < 0 || step >= ITEMS.length) return;
+        $$('audio').forEach(a => { try { a.pause(); } catch (e) {} });
+        currentStep = step;
+        sectionsEls.forEach((el, i) => el.classList.toggle('active-step', i === step));
+        updateStepNav();
+        updateLocationBanner();
+        if (!opts.fromGuide) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    function updateStepNav() {
+        const dots = document.getElementById('stepDots');
+        dots.innerHTML = ITEMS.map((_, i) => {
+            const cls = i === currentStep ? 'step-dot active' : 'step-dot';
+            return `<button class="${cls}" data-step="${i}" type="button" aria-label="Step ${i + 1}">${i + 1}</button>`;
+        }).join('');
+        document.getElementById('prevStep').disabled = currentStep === 0;
+        document.getElementById('nextStep').disabled = currentStep === ITEMS.length - 1;
+    }
+
+    function updateLocationBanner() {
+        const item = ITEMS[currentStep];
+        const icon = item.type === 'listening' ? '🎧' : '💬';
+        document.getElementById('locStepNum').textContent = (currentStep + 1) + ' / ' + ITEMS.length;
+        document.getElementById('locStepTitle').textContent = icon + ' ' + stepLabel(item);
+    }
+
+    document.getElementById('prevStep').addEventListener('click', () => navigateTo(currentStep - 1));
+    document.getElementById('nextStep').addEventListener('click', () => navigateTo(currentStep + 1));
+    document.getElementById('stepDots').addEventListener('click', (e) => {
+        const dot = e.target.closest('.step-dot');
+        if (!dot) return;
+        navigateTo(parseInt(dot.dataset.step, 10));
+    });
+
+    /* ================================================================
+       LEAVE
+       ================================================================ */
+    document.getElementById('leaveBtn').addEventListener('click', () => {
+        if (!confirm('Are you sure you want to leave the room? Your player data and answers will be removed from the shared room.')) return;
+
+        if (firebaseOk && me.role && me.role !== 'ghost') {
+            try { removeMyData(); } catch (e) { console.warn(e); }
+        }
+        try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+        if (roomRef) { try { roomRef.off(); } catch (e) {} }
+        setTimeout(() => location.reload(), 250);
+    });
+
+    function removeMyData() {
+        const root = 'rooms/' + me.room;
+        const role = me.role;
+        db.ref(root + '/players/' + role).remove();
+        db.ref(root + '/answers').once('value', snap => {
+            const answers = snap.val() || {};
+            Object.keys(answers).forEach(qid => {
+                if (answers[qid] && answers[qid].who === role) {
+                    db.ref(root + '/answers/' + qid).remove();
+                }
+            });
+        });
+    }
+
+    /* ================================================================
+       BOOT
+       ================================================================ */
+    initFirebase();
+})();
+</script>
 
 </body>
 </html>
